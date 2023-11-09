@@ -1,0 +1,75 @@
+﻿@page "/rgf/admin/{EntityName?}"
+@page "/rgf/entity/{EntityName}"
+
+@using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+@using Recrovit.RecroGridFramework.Client.Blazor.Components;
+
+@if (_entity != null)
+{
+    @_entity
+}
+
+@inject IRecroDictService _recroDict
+@inject NavigationManager Navigation
+@code {
+
+    [Parameter]
+    public string? EntityName { get; set; }
+
+    private RenderFragment? _entity { get; set; }
+
+    private string? _uri { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _uri = Navigation.Uri;
+        InitEntityParameters();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (_uri != Navigation.Uri)
+        {
+            _uri = Navigation.Uri;
+            InitEntityParameters();
+        }
+    }
+
+    private void InitEntityParameters()
+    {
+        if (!string.IsNullOrEmpty(EntityName))
+        {
+            if (EntityName.Equals("RecroSec", StringComparison.OrdinalIgnoreCase))
+            {
+                _entity = @<RecroSec />;
+            }
+            else
+            {
+                RgfListParam? listParam = null;
+                if (EntityName.Equals("MenuDesigner", StringComparison.OrdinalIgnoreCase))
+                {
+                    EntityName = "RGF_Menu";
+                    listParam = new()
+                        {
+                            UserFilter = new RgfFilter.Condition[] { new() { LogicalOperator = RgfFilter.LogicalOperator.And, PropertyId = 953, QueryOperator = RgfFilter.QueryOperator.Equal, IntValue1 = 10 } }
+                        };
+                }
+
+                var entityParameters = new RgfEntityParameters(EntityName)
+                    {
+                        Language = _recroDict.DefaultLanguage,
+                        TitleTemplate = (context) => (@<h4>@context.EntityDesc?.Title</h4>),
+                        ListParam = listParam
+                    };
+                _entity = RgfEntityComponent.Create(entityParameters);
+            }
+        }
+        else
+        {
+            _entity = null;
+        }
+    }
+}

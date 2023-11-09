@@ -1,0 +1,18 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+@if (HasErrors && ChildContent != null)
+{
+    @ChildContent
+}
+
+@code{
+
+    [Parameter, EditorRequired]
+    public RgfFormComponent FormComponent { get; set; } = null!;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [CascadingParameter]
+    public EditContext CurrentEditContext { get; set; } = default!;
+}

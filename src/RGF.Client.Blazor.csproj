@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Recrovit.RecroGridFramework.Client.Blazor</RootNamespace>
+    <AssemblyName>Recrovit.RecroGridFramework.Client.Blazor</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Company>Recrovit Kft.</Company>
+    <Product>RecroGrid Framework Client Blazor</Product>
+    <Copyright>© Recrovit Kft. All rights reserved.</Copyright>
+    <Version>7.0.0-preview</Version>
+    <FileVersion>$(Version).1$([System.DateTime]::Now.ToString(MMdd))</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>$(Company)</Authors>
+    <Title>$(Product)</Title>
+    <PackageOutputPath>..\..\dist</PackageOutputPath>
+    <PackageProjectUrl>https://recrogrid.com/</PackageProjectUrl>
+    <Description>$(Title)</Description>
+    <PackageTags>RecroGrid Framework</PackageTags>
+    <RepositoryUrl>https://github.com/RecroGridFramework/RGF.Client.Blazor.git</RepositoryUrl>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="7.0.0-preview" Condition="'$(Configuration)'=='Release'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\RGF.Client\src\RGF.Client.csproj" Condition="'$(Configuration)'=='Debug'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\.gitignore" />
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,61 @@
+﻿@if (_initialized && Manager != null)
+{
+    if (!EntityParameters.FormOnly)
+    {
+        if (EntityParameters.TitleTemplate != null)
+        {
+            @EntityParameters.TitleTemplate(Manager)
+        }
+        <div id="@Manager.EntityDomId" class="@($"recro-grid recro-grid-base rg-ent-{Manager.EntityDesc.EntityId}")" style="width:fit-content">
+            @if (!string.IsNullOrEmpty(Manager.EntityDesc.CRUD))
+            {
+                @ToolbarTemplate(EntityParameters)
+                @GridTemplate(EntityParameters)
+                @PagerTemplate(EntityParameters)
+                @FilterTemplate(EntityParameters)
+            }
+            else
+            {
+                @Manager.RecroDict.GetRgfUiString("AccessDenied")
+            }
+        </div>
+    }
+    if (FormDataKey != null)
+    {
+        @FormTemplate(EntityParameters)
+    }
+    if (_entityEditor != null)
+    {
+        @_entityEditor
+    }
+}
+else if (LoadingIndicator != null)
+{
+    @LoadingIndicator
+}
+
+<RgfDynamicDialog @ref="_dynamicDialog" />
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfEntityParameters EntityParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfEntityParameters> ToolbarTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfEntityParameters> GridTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfEntityParameters> FilterTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfEntityParameters> PagerTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfEntityParameters> FormTemplate { get; set; } = null!;
+
+    [Parameter]
+    public RenderFragment LoadingIndicator { get; set; } = @<p><em>Loading...</em></p>;
+}

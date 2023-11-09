@@ -1,0 +1,24 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+@ItemTemplate(this)
+
+@*<ValidationMessage TValue="object" For=" FieldIdentifier only supports simple member accessors (fields, properties) of an object. "></ValidationMessage>*@
+@if (ShowValidationMessage && ItemValidationMessage != null)
+{
+    @ItemValidationMessage
+}
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfFormItemParameters FormItemParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfFormItemComponent> ItemTemplate { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowValidationMessage { get; set; } = true;
+
+    [CascadingParameter]
+    public EditContext CurrentEditContext { get; set; } = null!;
+}
