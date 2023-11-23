@@ -32,12 +32,19 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.0.0-preview" Condition="'$(Configuration)'=='Release'" />
+  <ItemGroup Condition="'$(Configuration)'=='Release'">
+    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.0.0-preview" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)'=='Debug'">
+    <ProjectReference Include="..\..\RGF.Client\src\RGF.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\RGF.Client\src\RGF.Client.csproj" Condition="'$(Configuration)'=='Debug'" />
+    <Content Remove="libman.json" />
+    <None Include="libman.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
