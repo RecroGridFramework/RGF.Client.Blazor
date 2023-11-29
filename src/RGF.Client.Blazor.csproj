@@ -14,6 +14,8 @@
     <Copyright>© Recrovit Kft. All rights reserved.</Copyright>
     <Version>8.0.0-preview</Version>
     <FileVersion>$(Version).1$([System.DateTime]::Now.ToString(MMdd))</FileVersion>
+    <InformationalVersion>$(FileVersion)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -22,7 +24,7 @@
     <PackageOutputPath>..\..\dist</PackageOutputPath>
     <PackageProjectUrl>https://recrogrid.com/</PackageProjectUrl>
     <Description>$(Title)</Description>
-    <PackageTags>RecroGrid Framework</PackageTags>
+    <PackageTags>RecroGrid Framework Client Blazor</PackageTags>
     <RepositoryUrl>https://github.com/RecroGridFramework/RGF.Client.Blazor.git</RepositoryUrl>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -41,17 +43,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\.gitignore" />
+    <None Include="..\README.*" Pack="true" PackagePath="\" />
     <Content Remove="libman.json" />
     <None Include="libman.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\.gitignore" />
-    <None Include="..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 
