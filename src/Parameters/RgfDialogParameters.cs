@@ -33,6 +33,8 @@ public class RgfDialogParameters
 
     public RenderFragment? FooterTemplate { get; set; }
 
+    public RenderFragment? DynamicChild { get; set; }
+
     public Func<bool>? OnClose { get; set; }
 
     public Action? Destroy { get; set; }
