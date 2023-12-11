@@ -10,10 +10,7 @@ using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Models;
-using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -71,6 +68,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
         FormParameters = EntityParameters.FormParameters;
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
+        FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
         FormParameters.DialogParameters.OnClose = OnClose;
         FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width ?? "80%";

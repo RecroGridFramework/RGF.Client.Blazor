@@ -1,11 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Recrovit.RecroGridFramework.Client.Blazor.Components;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
@@ -26,6 +21,8 @@ public class RgfDialogParameters
     public string? Height { get; set; }
 
     public string? CssClass { get; set; }
+
+    public string? UniqueName { get; set; }
 
     public RenderFragment? HeaderTemplate { get; set; }
 
