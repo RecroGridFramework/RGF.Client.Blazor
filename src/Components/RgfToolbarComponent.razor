@@ -1,0 +1,14 @@
+﻿<div>
+    @ToolbarTemplate(this)
+</div>
+
+<RgfDynamicDialog @ref="_dynamicDialog" />
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfEntityParameters EntityParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfToolbarComponent> ToolbarTemplate { get; set; } = null!;
+}

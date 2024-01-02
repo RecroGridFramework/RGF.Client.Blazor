@@ -1,0 +1,52 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+@if (ShowDialog)
+{
+    @_formDialog
+}
+
+<RgfDynamicDialog @ref="_dynamicDialog" />
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfEntityParameters EntityParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfFormComponent> FormTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfFormItemParameters> FormItemTemplate { get; set; } = null!;
+
+    [Parameter]
+    public RenderFragment<RgfFormComponent>? FooterTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<RgfSelectParam>? GridSelectTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<RgfFormComponent> FormValidationTemplate { get; set; } = (param) => @<div><ValidationSummary /></div>;
+
+    [Parameter]
+    public RenderFragment<RgfFormGroupLayoutParameters>? FormGroupLayoutTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<RgfFormItemParameters>? FormItemLayoutTemplate { get; set; }
+
+    public RenderFragment<RgfFormGroupLayoutParameters> DefaultFormGroupLayoutTemplate => (param) =>
+    @<div class="rg-form-grid-container">
+        @foreach (var prop in param.FormGroup.Properties)
+        {
+            @param.FormComponent.GetFormItemLayoutTemplate(new RgfFormItemParameters(this, param.FormGroup, prop))
+        }
+    </div>;
+
+    public RenderFragment<RgfFormItemParameters> DefaultFormItemLayoutTemplate => (param) =>
+    @<div name="@param.Property.ClientName" class="rg-form-grid-col" style="@($"grid-column-end: span {param.Property.FlexColumnWidth ?? param.Group.FlexColumnWidth};")">
+        @if (!string.IsNullOrEmpty(param.Property.PreElement))
+        {
+            @((MarkupString)param.Property.PreElement)
+        }
+        @param.FormComponent.GetFormItemTemplate(param)
+    </div>;
+}

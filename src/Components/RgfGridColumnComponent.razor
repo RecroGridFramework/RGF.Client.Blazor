@@ -1,0 +1,27 @@
+﻿@using Recrovit.RecroGridFramework.Client.Services
+
+<div @ref=_elementRef class="cell-content">
+    @if (Data != null)
+    {
+        switch (PropDesc.ListType)
+        {
+            case PropertyListType.Image:
+                <img src="@($"{ApiService.BaseAddress}{Data}")">
+                break;
+
+            case PropertyListType.Html:
+                @((MarkupString)Data)
+                break;
+
+            default:
+                @Data
+                break;
+        }
+    }
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfGridColumnParameters GridColumnParameters { get; set; } = null!;
+}

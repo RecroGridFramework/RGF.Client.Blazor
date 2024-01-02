@@ -1,0 +1,12 @@
+﻿<div class="rgf-pager-container">
+    @PagerTemplate(this)
+</div>
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfEntityParameters EntityParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfPagerComponent> PagerTemplate { get; set; } = null!;
+}

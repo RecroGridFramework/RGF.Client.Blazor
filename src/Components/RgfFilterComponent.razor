@@ -1,0 +1,18 @@
+﻿@if (_showComponent)
+{
+    @_filterDialog
+}
+
+<RgfDynamicDialog @ref="_dynamicDialog" />
+
+@code {
+
+    [Parameter, EditorRequired]
+    public RgfEntityParameters EntityParameters { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfFilterComponent> FilterTemplate { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfFilterComponent> FooterTemplate { get; set; } = null!;
+}
