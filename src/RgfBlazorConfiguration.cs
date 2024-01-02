@@ -77,6 +77,8 @@ public static class RgfBlazorConfiguration
         EntityComponentTypes[entityName ?? string.Empty] = typeof(TComponent);
     }
 
+    public static void ClearEntityComponentTypes() => EntityComponentTypes.Clear();
+
     public static void RegisterComponent<TComponent>(ComponentType type) where TComponent : ComponentBase
     {
         ComponentTypes[type] = typeof(TComponent);

@@ -10,10 +10,7 @@ using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Models;
-using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -58,8 +55,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     private RenderFragment? _formDialog { get; set; }
 
-    private RenderFragment? _selectDialog { get; set; }
-
     private RgfDialogParameters? _selectDialogParameters { get; set; }
 
     private RgfSelectParam? _selectParam { get; set; }
@@ -73,6 +68,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
         FormParameters = EntityParameters.FormParameters;
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
+        FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
         FormParameters.DialogParameters.OnClose = OnClose;
         FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width ?? "80%";
@@ -229,7 +225,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };
             _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
-            _selectDialog = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
+            FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
+            
         }
     }
 
@@ -243,7 +240,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             _selectDialogParameters.Destroy();
         }
-        _selectDialog = null;
+        FormParameters.DialogParameters.DynamicChild = null;
         _selectParam = null;
         _selectDialogParameters = null;
         StateHasChanged();
