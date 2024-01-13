@@ -1,17 +1,13 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Events;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -39,10 +35,10 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         await base.OnInitializedAsync();
 
-        Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, OnChangeGridData));
+        Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, OnChangedGridData));
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
 
-        await OnChangeGridData(new(GridData, Manager.ListHandler.GridData.Value));
+        await OnChangedGridData(new(GridData, Manager.ListHandler.GridData.Value));
     }
 
     private async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
@@ -92,6 +88,10 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 QuickWatch();
                 break;
 
+            case ToolbarAction.ExportCsv:
+                await ExportCsvAsync();
+                break;
+
             case ToolbarAction.RecroTrack:
                 RecroTrack();
                 break;
@@ -113,6 +113,29 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 ContentTemplate = RgfEntityComponent.Create(param, _logger),
             };
             _dynamicDialog.Dialog(dialogParameters);
+        }
+    }
+
+    protected async Task ExportCsvAsync()
+    {
+        var listSeparator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+        var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
+        var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
+        if (result != null)
+        {
+            Manager.BroadcastMessages(result.Messages, this);
+            if (result.Result?.Results != null)
+            {
+                var stream = await Manager.GetResourceAsync<Stream>("export.csv", new Dictionary<string, string>() {
+                    { "sessionId", Manager.SessionParams.SessionId },
+                    { "id", result.Result.Results.ToString()! }
+                });
+                if (stream != null)
+                {
+                    using var streamRef = new DotNetStreamReference(stream);
+                    await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
+                }
+            }
         }
     }
 
@@ -153,7 +176,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         return ColumnTemplate(param);
     }
 
-    protected virtual async Task OnChangeGridData(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
+    protected virtual async Task OnChangedGridData(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
     {
         _logger.LogDebug("OnChangeGridData");
         var EntityDesc = Manager.EntityDesc;

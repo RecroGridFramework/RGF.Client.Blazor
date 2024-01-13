@@ -7,8 +7,6 @@ using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Mappings;
-using System;
-using System.Linq;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -76,6 +74,16 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         {
             menu.Add(new(RgfMenuType.FunctionForRec, "QuickWatch", Menu.QuickWatch));
         }
+        if (Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.Export))
+        {
+            var export = new RgfMenu()
+            {
+                MenuType = RgfMenuType.Menu,
+                Title = "Export"
+            };
+            export.NestedMenu.Add(new RgfMenu(RgfMenuType.Function, "Comma-separated values (CSV)", Menu.ExportCsv));
+            menu.Add(export);
+        }
         if (Manager.RecroSec.IsAdmin)
         {
             var adminMenu = new List<RgfMenu>();
@@ -120,7 +128,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         else
         {
-            if(menu.Command == Menu.EntityEditor)
+            if (menu.Command == Menu.EntityEditor)
             {
                 Manager.NotificationManager.RaiseEvent(new RgfMenuEventArgs(menu.Command), this);
             }
