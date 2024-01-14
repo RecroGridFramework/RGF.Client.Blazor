@@ -104,6 +104,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         var key = FormParameters.EntityKey;
         if (_previousEntityKey?.Equals(key) != true)
         {
+            _previousEntityKey = key;
             ShowDialog = await this.ParametersSetAsync(key);
             if (ShowDialog)
             {
@@ -117,7 +118,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 }
             }
         }
-        _previousEntityKey = key;
     }
 
     public async Task<bool> ParametersSetAsync(RgfEntityKey entityKey)
@@ -220,13 +220,13 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             _selectDialogParameters = new()
             {
                 IsModal = true,
+                Resizable = true,
                 ShowCloseButton = true,
                 ContentTemplate = RgfEntityComponent.Create(new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam }, _logger),
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };
             _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
-            
         }
     }
 

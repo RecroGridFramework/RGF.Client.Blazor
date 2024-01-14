@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
-using System;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq;
+using System.Globalization;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -18,6 +16,8 @@ public partial class RgfGridColumnComponent : ComponentBase
 
     private RgfEntity EntityDesc => GridColumnParameters.GridComponent.Manager.EntityDesc;
 
+    private IRecroDictService RecroDict => GridColumnParameters.GridComponent.Manager.RecroDict;
+
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 
     private RgfDynamicDictionary RowData => GridColumnParameters.RowData;
@@ -27,13 +27,29 @@ public partial class RgfGridColumnComponent : ComponentBase
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
-        Data = RowData?.GetMember(PropDesc.Alias)?.ToString() ?? "";
+        var objData = RowData?.GetMember(PropDesc.Alias);
+        Data = objData?.ToString() ?? "";
         object? value;
         if (PropDesc.Options?.TryGetValue("RGO_JSReplace", out value) == true)
         {
             Data = await _jsRuntime.InvokeAsync<string>(RgfBlazorConfiguration.JsBlazorNamespace + ".invokeGridColFuncAsync", value.ToString(), CreateJSArgs(EntityDesc, RowData, PropDesc, Data));
         }
+        else if (objData is DateTime && PropDesc.ListType == PropertyListType.Date)
+        {
+            CultureInfo culture = RecroDict.CultureInfo();
+            if (PropDesc.FormType == PropertyFormType.DateTime)
+            {
+                Data = string.Format("{0} {1}",
+                    ((DateTime)objData).ToString("d", culture).Replace(" ", ""),
+                    ((DateTime)objData).ToString("HH:mm:ss", culture).Replace(" ", ""));
+            }
+            else
+            {
+                Data = ((DateTime)objData).ToString("d", culture).Replace(" ", "");
+            }
+        }
     }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
