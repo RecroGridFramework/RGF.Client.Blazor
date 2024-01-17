@@ -11,13 +11,39 @@ using System.Reflection;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor;
 
-public static class RgfBlazorConfiguration
+public class RgfBlazorConfiguration
+{
+    internal static Dictionary<string, Type> EntityComponentTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = new();
+
+    public static void RegisterEntityComponent<TComponent>(string entityName) where TComponent : ComponentBase
+    {
+        EntityComponentTypes[entityName ?? string.Empty] = typeof(TComponent);
+    }
+
+    public static void ClearEntityComponentTypes() => EntityComponentTypes.Clear();
+
+    public static void RegisterComponent<TComponent>(ComponentType type) where TComponent : ComponentBase
+    {
+        ComponentTypes[type] = typeof(TComponent);
+    }
+
+    public enum ComponentType
+    {
+        Menu,
+        Dialog
+    }
+
+    public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
+    public static readonly string JsWebCliNamespace = "Recrovit.WebCli";
+}
+
+public static class RgfBlazorConfigurationExtension
 {
     public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null)
     {
         services.AddRgfServices(configuration, logger);
-
-        logger?.LogInformation("Initializing configuration for RecroGrid Framework in Blazor.");
 
         var httpClientBuilder = services.AddHttpClient(ApiService.RgfAuthApiClientName, httpClient => httpClient.BaseAddress = new Uri(ApiService.BaseAddress));
 
@@ -42,6 +68,9 @@ public static class RgfBlazorConfiguration
     {
         await serviceProvider.InitializeRgfClientAsync();
         await LoadScripts(serviceProvider);
+        var ver = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+        var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
+        logger?.LogInformation($"RecroGrid Framework Blazor v{ver} initialized.");
     }
 
     private static async Task LoadScripts(IServiceProvider serviceProvider)
@@ -68,28 +97,4 @@ public static class RgfBlazorConfiguration
         }
         await jsRuntime.InvokeVoidAsync("import", $"{RgfClientConfiguration.AppRootUrl}_content/{libName}/scripts/recrovit-rgf-blazor.js");
     }
-
-    internal static Dictionary<string, Type> EntityComponentTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
-    internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = new();
-
-    public static void RegisterEntityComponent<TComponent>(string entityName) where TComponent : ComponentBase
-    {
-        EntityComponentTypes[entityName ?? string.Empty] = typeof(TComponent);
-    }
-
-    public static void ClearEntityComponentTypes() => EntityComponentTypes.Clear();
-
-    public static void RegisterComponent<TComponent>(ComponentType type) where TComponent : ComponentBase
-    {
-        ComponentTypes[type] = typeof(TComponent);
-    }
-
-    public enum ComponentType
-    {
-        Menu,
-        Dialog
-    }
-
-    public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
-    public static readonly string JsWebCliNamespace = "Recrovit.WebCli";
 }
