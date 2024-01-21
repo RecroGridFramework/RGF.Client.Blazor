@@ -51,6 +51,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                     {
                         Title = "QueryString",
                         ShowCloseButton = true,
+                        Resizable = true,
                         Width = "800px",
                         Height = "600px",
                         ContentTemplate = (builder) =>
@@ -110,6 +111,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             {
                 IsModal = false,
                 ShowCloseButton = true,
+                Resizable = true,
+                UniqueName = "quickwatch",
                 ContentTemplate = RgfEntityComponent.Create(param, _logger),
             };
             _dynamicDialog.Dialog(dialogParameters);
@@ -152,6 +155,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         {
             IsModal = false,
             ShowCloseButton = true,
+            Resizable = true,
+            UniqueName = "recrotrack",
             ContentTemplate = RgfEntityComponent.Create(param, _logger),
         };
         _dynamicDialog.Dialog(dialogParameters);

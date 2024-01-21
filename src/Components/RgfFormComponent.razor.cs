@@ -222,6 +222,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 IsModal = true,
                 Resizable = true,
                 ShowCloseButton = true,
+                UniqueName = "select-" + Manager.EntityDesc.NameVersion.ToLower(),
                 ContentTemplate = RgfEntityComponent.Create(new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam }, _logger),
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };

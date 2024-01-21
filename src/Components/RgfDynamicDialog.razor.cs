@@ -2,8 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
-using System;
-using System.Linq;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -64,7 +62,14 @@ public partial class RgfDynamicDialog : ComponentBase
     public void Dialog(RgfDialogParameters parameters)
     {
         var key = ++_componentCount;
-        parameters.OnClose = () => Close(key);
+        parameters.OnClose = () =>
+        {
+            if (parameters.Destroy != null)
+            {
+                parameters.Destroy();
+            }
+            return Close(key);
+        };
         parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
         _dynamicDialogs.Add(_componentCount, Create(parameters));
         StateHasChanged();
