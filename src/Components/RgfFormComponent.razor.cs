@@ -346,10 +346,10 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             var foreign = prop.ForeignEntity.EntityKeys.First().Foreign;
             var keyProp = Manager.EntityDesc.Properties.SingleOrDefault(e => e.Id == foreign);
 
-            _logger.LogDebug("ApplySelectParam => {alias}:{value}, {alias}:{value}", prop.Alias, filter.Value, keyProp?.Alias, key.Value);
+            _logger.LogDebug("ApplySelectParam => filter:{alias}={value}, key:{alias}={value}", prop.Alias, filter.Value, keyProp?.Alias, key.Value);
 
             FormData.DataRec.SetMember(prop.Alias, filter.Value);
-            if (keyProp != null)
+            if (keyProp?.Alias != null)
             {
                 FormData.DataRec.SetMember(keyProp.Alias, key.Value);
             }
