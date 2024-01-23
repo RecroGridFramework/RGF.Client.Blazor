@@ -7,8 +7,6 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -64,7 +62,9 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public void ShowDialog()
     {
-        Columns = Manager.EntityDesc.Properties.Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid).Select(e => new GridColumnSettings(e))
+        Columns = Manager.EntityDesc.Properties
+            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity)
+            .Select(e => new GridColumnSettings(e))
             .OrderBy(e => e.ColPos == null)
             .ThenBy(e => e.ColPos)
             .ThenBy(e => e.Property.ColTitle)
