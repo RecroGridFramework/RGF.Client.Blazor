@@ -61,7 +61,7 @@
                 var entityParameters = new RgfEntityParameters(EntityName)
                     {
                         Language = _recroSec.UserLanguage,
-                        TitleTemplate = (context) => (@<h4>@context.EntityDesc?.Title</h4>),
+                        TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>),
                     ListParam = listParam
                 };
                 _entity = RgfEntityComponent.Create(entityParameters);
