@@ -9,7 +9,7 @@
     @_entity
 }
 
-@inject IRecroDictService _recroDict
+@inject IRecroSecService _recroSec
 @inject NavigationManager Navigation
 @code {
 
@@ -60,10 +60,10 @@
 
                 var entityParameters = new RgfEntityParameters(EntityName)
                     {
-                        Language = _recroDict.DefaultLanguage,
-                        TitleTemplate = (context) => (@<h4>@context.EntityDesc?.Title</h4>),
-                        ListParam = listParam
-                    };
+                        Language = _recroSec.UserLanguage,
+                        TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>),
+                    ListParam = listParam
+                };
                 _entity = RgfEntityComponent.Create(entityParameters);
             }
         }

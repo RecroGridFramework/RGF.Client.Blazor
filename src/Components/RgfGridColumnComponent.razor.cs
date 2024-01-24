@@ -16,7 +16,7 @@ public partial class RgfGridColumnComponent : ComponentBase
 
     private RgfEntity EntityDesc => GridColumnParameters.GridComponent.Manager.EntityDesc;
 
-    private IRecroDictService RecroDict => GridColumnParameters.GridComponent.Manager.RecroDict;
+    private IRecroSecService RecroSec => GridColumnParameters.GridComponent.Manager.RecroSec;
 
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 
@@ -36,7 +36,7 @@ public partial class RgfGridColumnComponent : ComponentBase
         }
         else if (objData is DateTime && PropDesc.ListType == PropertyListType.Date)
         {
-            CultureInfo culture = RecroDict.CultureInfo();
+            CultureInfo culture = RecroSec.UserCultureInfo();
             if (PropDesc.FormType == PropertyFormType.DateTime)
             {
                 Data = string.Format("{0} {1}",

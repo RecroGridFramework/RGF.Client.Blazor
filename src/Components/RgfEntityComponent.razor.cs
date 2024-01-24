@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
@@ -7,9 +8,7 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
-using System.Text;
+using Recrovit.RecroGridFramework.Client.Services;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -38,6 +37,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     [Inject]
     private ILogger<RgfEntityComponent> _logger { get; set; } = null!;
+
+    [Inject]
+    private IJSRuntime _jsRuntime { get; set; } = default!;
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
@@ -95,11 +97,23 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
+            await InitResourcesAsync();
             _initialized = true;
         }
         else
         {
             _ = EntityParameters.DestroyEvent.InvokeAsync(EventArgs.Empty);
+        }
+    }
+
+    private async Task InitResourcesAsync()
+    {
+        if (Manager?.EntityDesc.StylesheetsReferences?.Any() == true)
+        {
+            foreach (var css in Manager.EntityDesc.StylesheetsReferences)
+            {
+                await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}{css}", false);
+            }
         }
     }
 
