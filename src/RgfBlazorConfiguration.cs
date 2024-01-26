@@ -64,19 +64,24 @@ public static class RgfBlazorConfigurationExtension
         return services;
     }
 
-    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider)
+    public static Task InitializeRgfBlazorServerAsync(this IServiceProvider serviceProvider) => serviceProvider.InitializeRgfBlazorAsync(false);
+
+    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider, bool clientSideRendering = true)
     {
-        await serviceProvider.InitializeRgfClientAsync();
-        await LoadScripts(serviceProvider);
+        await serviceProvider.InitializeRgfClientAsync(clientSideRendering);
+        if (clientSideRendering)
+        {
+            await LoadResourcesAsync(serviceProvider);
+        }
         var ver = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
         logger?.LogInformation($"RecroGrid Framework Blazor v{ver} initialized.");
     }
 
-    private static async Task LoadScripts(IServiceProvider serviceProvider)
+    public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
     {
-        var api = serviceProvider.GetRequiredService<IRgfApiService>();
         var jsRuntime = serviceProvider.GetRequiredService<IJSRuntime>();
+        var api = serviceProvider.GetRequiredService<IRgfApiService>();
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
 
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery !== 'undefined'");
