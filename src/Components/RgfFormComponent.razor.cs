@@ -173,7 +173,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             int sequence = 0;
             builder.OpenComponent<RgfFormValidationComponent>(sequence++);
-            builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.FormComponent), this);
+            builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.BaseFormComponent), this);
             builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.ChildContent), FormValidationTemplate(this));
             builder.AddComponentReferenceCapture(sequence++, (component) => FormValidation = (RgfFormValidationComponent)component);
             builder.CloseComponent();

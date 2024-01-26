@@ -2,17 +2,14 @@
 using Microsoft.AspNetCore.Components.Forms;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
-using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfFormItemComponent : ComponentBase
 {
-    public string ErrorCssClass => FormItemParameters.FormComponent.FormParameters.ErrorCssClass ?? "";
+    public string ErrorCssClass => FormItemParameters.BaseFormComponent.FormParameters.ErrorCssClass ?? "";
 
-    public string ModifiedCssClass => FormItemParameters.FormComponent.FormParameters.ModifiedCssClass ?? "";
+    public string ModifiedCssClass => FormItemParameters.BaseFormComponent.FormParameters.ModifiedCssClass ?? "";
 
     public string? CssClass
     {
@@ -23,7 +20,7 @@ public partial class RgfFormItemComponent : ComponentBase
         }
     }
 
-    private IRgManager Manager => FormItemParameters.FormComponent.Manager;
+    private IRgManager Manager => FormItemParameters.BaseFormComponent.Manager;
 
     public RenderFragment? ItemValidationMessage { get; private set; }
 
@@ -35,12 +32,12 @@ public partial class RgfFormItemComponent : ComponentBase
 
         CurrentEditContext.OnValidationStateChanged += (sender, args) => ItemValidationMessage = this.CreateValidationMessage(ErrorCssClass);
         //CurrentEditContext.OnValidationRequested += OnValidation;
-        FormItemParameters.ItemData.OnAfterChange += (args) => { FormItemParameters.FormComponent.FormValidation?.NotifyFieldChanged(FormItemParameters); };
+        FormItemParameters.ItemData.OnAfterChange += (args) => { FormItemParameters.BaseFormComponent.FormValidation?.NotifyFieldChanged(FormItemParameters); };
     }
 
     private void OnValidation(object? sender, ValidationRequestedEventArgs args)
     {
-        //FormComponent.FormValidation?.AddFieldError(_fieldId, $"Custom error");
+        //BaseFormComponent.FormValidation?.AddFieldError(_fieldId, $"Custom error");
     }
 
     public void OnSearchEntity(string filter)
@@ -52,7 +49,7 @@ public partial class RgfFormItemComponent : ComponentBase
     public RenderFragment? CreateValidationMessage(string? cssClass = null)
     {
         RenderFragment? validationMessage = null;
-        var messages = FormItemParameters.FormComponent.CurrentEditContext.GetValidationMessages(FormItemParameters.FieldId).ToArray();
+        var messages = FormItemParameters.BaseFormComponent.CurrentEditContext.GetValidationMessages(FormItemParameters.FieldId).ToArray();
         if (messages.Any())
         {
             validationMessage = (builder) =>
@@ -74,7 +71,7 @@ public partial class RgfFormItemComponent : ComponentBase
     public RgfSelectParam CreateSelectParam(string filter)
     {
         RgfEntityKey current = new() { Keys = new() };
-        var formData = FormItemParameters.FormComponent.FormData;
+        var formData = FormItemParameters.BaseFormComponent.FormData;
         foreach (var item in Property.ForeignEntity.EntityKeys)
         {
             var clientName = $"rg-col-{item.Key}";
