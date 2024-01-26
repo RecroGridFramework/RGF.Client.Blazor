@@ -12,6 +12,9 @@
     public RgfEntityParameters EntityParameters { get; set; } = null!;
 
     [Parameter, EditorRequired]
+    public ComponentBase GridComponent { get; set; } = null!;
+
+    [Parameter, EditorRequired]
     public RenderFragment<RgfGridComponent> GridTemplate { get; set; } = null!;
 
     [Parameter, EditorRequired]

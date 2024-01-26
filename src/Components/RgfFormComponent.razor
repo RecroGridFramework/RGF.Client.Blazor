@@ -13,6 +13,9 @@
     public RgfEntityParameters EntityParameters { get; set; } = null!;
 
     [Parameter, EditorRequired]
+    public ComponentBase FormComponent { get; set; } = null!;
+
+    [Parameter, EditorRequired]
     public RenderFragment<RgfFormComponent> FormTemplate { get; set; } = null!;
 
     [Parameter, EditorRequired]
