@@ -14,9 +14,9 @@ public partial class RgfGridColumnComponent : ComponentBase
 
     private ElementReference _elementRef;
 
-    private RgfEntity EntityDesc => GridColumnParameters.GridComponent.Manager.EntityDesc;
+    private RgfEntity EntityDesc => GridColumnParameters.BaseGridComponent.Manager.EntityDesc;
 
-    private IRecroSecService RecroSec => GridColumnParameters.GridComponent.Manager.RecroSec;
+    private IRecroSecService RecroSec => GridColumnParameters.BaseGridComponent.Manager.RecroSec;
 
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 

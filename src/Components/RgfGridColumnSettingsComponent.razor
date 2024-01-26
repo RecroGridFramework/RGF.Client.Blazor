@@ -7,7 +7,7 @@
 @code {
 
     [Parameter, EditorRequired]
-    public RgfGridComponent GridComponent { get; set; } = null!;
+    public RgfGridComponent BaseGridComponent { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfGridColumnSettingsComponent> SettingsTemplate { get; set; } = null!;
