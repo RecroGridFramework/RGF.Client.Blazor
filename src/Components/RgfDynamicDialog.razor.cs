@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
+using Recrovit.RecroGridFramework.Client.Events;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -41,11 +42,34 @@ public partial class RgfDynamicDialog : ComponentBase
 
     private int _componentCount { get; set; } = 0;
 
-    public void Info(string title, string message) => Dialog(DialogType.Info, title, (builder) => builder.AddContent(0, message));
+    public void Info(string title, string message) => Dialog(DialogType.Info, title, message);
 
-    public void Warning(string title, string message) => Dialog(DialogType.Warning, title, (builder) => builder.AddContent(0, message));
+    public void Warning(string title, string message) => Dialog(DialogType.Warning, title, message);
 
-    public void Alert(string title, string message) => Dialog(DialogType.Error, title, (builder) => builder.AddContent(0, message));
+    public void Alert(string title, string message) => Dialog(DialogType.Error, title, message);
+
+    public void Dialog(DialogType dialogType, string title, string message) => Dialog(dialogType, title, (builder) => builder.AddContent(0, message));
+
+    public void Dialog(RgfUserMessage message)
+    {
+        DialogType dialogType;
+        switch (message.Category)
+        {
+            case UserMessageType.Information:
+                dialogType = DialogType.Info;
+                break;
+            case UserMessageType.Warning:
+                dialogType = DialogType.Warning;
+                break;
+            case UserMessageType.Error:
+                dialogType = DialogType.Error;
+                break;
+            default:
+                dialogType = DialogType.Default;
+                break;
+        }
+        Dialog(dialogType, message.Title, (builder) => builder.AddContent(0, message.Message));
+    }
 
     public void Dialog(DialogType dialogType, string title, RenderFragment content)
     {

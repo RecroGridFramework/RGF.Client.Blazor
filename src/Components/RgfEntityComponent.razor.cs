@@ -143,7 +143,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     {
         if (args.Args.Origin == UserMessageOrigin.Global)
         {
-            _dynamicDialog.Alert(args.Args.Title, args.Args.Message);
+            _dynamicDialog.Dialog(args.Args);
         }
     }
 
