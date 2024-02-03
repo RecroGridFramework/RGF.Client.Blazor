@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
-using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Events;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -204,7 +204,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 attributes[$"style-{prop.Alias}"] = list.Any() ? string.Join(";", list) : null;
             }
             rowData["__attributes"] = attributes;
-            await GridParameters.Events.CreateAttributes.InvokeAsync(new DataEventArgs<RgfDynamicDictionary>(rowData));
+            var eventArgs = new RgfGridEventArgs(RgfGridEventKind.CreateAttributes, this, rowData: rowData);
+            await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
         }
         GridData = args.NewData;
 

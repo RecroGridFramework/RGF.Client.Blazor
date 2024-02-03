@@ -67,7 +67,7 @@ public partial class RgfFormValidationComponent : ComponentBase
             return;
         }
         BaseFormComponent._logger.LogDebug("OnValidationRequested: {FieldName}", fieldIdentifier.FieldName);
-        var eventArgs = new RgfFormViewEventArgs(FormViewEventKind.ValidationRequested, BaseFormComponent);
+        var eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent);
         if (string.IsNullOrEmpty(fieldIdentifier.FieldName))
         {
             _messageStore.Clear();
@@ -90,8 +90,9 @@ public partial class RgfFormValidationComponent : ComponentBase
                 RequiredValidator(fieldIdentifier, property);
             }
         }
-        BaseFormComponent.FormParameters.EventDispatcher.DispatchEvent(eventArgs.EventKind, new RgfEventArgs<RgfFormViewEventArgs>(this, eventArgs));
-        CurrentEditContext.NotifyValidationStateChanged();
+        _ = BaseFormComponent.FormParameters.EventDispatcher
+            .DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs))
+            .ContinueWith(t => CurrentEditContext.NotifyValidationStateChanged());
     }
 
     private void RequiredValidator(FieldIdentifier fieldIdentifier, RgfForm.Property property)

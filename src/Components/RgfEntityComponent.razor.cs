@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -98,11 +99,14 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             EntityParameters.Manager = Manager;
             await InitResourcesAsync();
             _initialized = true;
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
             _logger.LogDebug("RgfEntityComponent.Initialized");
         }
         else
         {
-            _ = EntityParameters.DestroyEvent.InvokeAsync(EventArgs.Empty);
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
     }
 
@@ -129,6 +133,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             }
             _initialized = true;
             _logger.LogDebug("RgfEntityComponent.Initialized");
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
             StateHasChanged();
         });
     }
@@ -147,7 +153,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         EntityParameters.FormParameters!.EntityKey = FormDataKey ?? new();
         if (EntityParameters.FormOnly && FormDataKey == null)
         {
-            _ = EntityParameters.DestroyEvent.InvokeAsync(EventArgs.Empty);
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager!);
+            _ = EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
     }
 
@@ -165,7 +172,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                     }
                 }
             };
-            param.DestroyEvent.Subscribe(e =>
+            param.EventDispatcher.Subscribe(RgfEntityEventKind.Destroy, (arg) =>
             {
                 _entityEditor = null;
                 StateHasChanged();

@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
-using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Events;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Events;
+using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
-using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
@@ -42,5 +40,5 @@ public class RgfEntityParameters : RgfSessionParams
 
     public Dictionary<string, object>? CustomParams { get; set; }
 
-    public EventDispatcher<EventArgs> DestroyEvent { get; } = new();
+    public RgfEventDispatcher<RgfEntityEventKind, RgfEntityEventArgs> EventDispatcher { get; } = new();
 }

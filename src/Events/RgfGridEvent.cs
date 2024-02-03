@@ -1,21 +1,29 @@
-﻿using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Events;
-using Recrovit.RecroGridFramework.Abstraction.Extensions;
-using Recrovit.RecroGridFramework.Abstraction.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Events;
 
-public class GridEvents
+public enum RgfGridEventKind
 {
-    private Dictionary<string, object> _dispatchers = new();
+    CreateAttributes,
+    ColumnSettingsChanged
+}
 
-    public EventDispatcher<DataEventArgs<RgfDynamicDictionary>> CreateAttributes 
-        => ((EventDispatcher<DataEventArgs<RgfDynamicDictionary>>)_dispatchers.GetOrCreate(nameof(CreateAttributes), () => new EventDispatcher<DataEventArgs<RgfDynamicDictionary>>()));
+public class RgfGridEventArgs : EventArgs
+{
+    public RgfGridEventArgs(RgfGridEventKind eventKind, RgfGridComponent gridComponent, RgfDynamicDictionary? rowData = null, IEnumerable<RgfProperty>? properties = null)
+    {
+        EventKind = eventKind;
+        BaseGridComponent = gridComponent;
+        RowData = rowData;
+        Properties = properties;
+    }
 
-    public EventDispatcher<DataEventArgs<IEnumerable<RgfProperty>>> ColumnSettingsChanged
-        => ((EventDispatcher<DataEventArgs<IEnumerable<RgfProperty>>>)_dispatchers.GetOrCreate(nameof(ColumnSettingsChanged), () => new EventDispatcher<DataEventArgs<IEnumerable<RgfProperty>>>()));
+    public RgfGridEventKind EventKind { get; }
+
+    public RgfGridComponent BaseGridComponent { get; }
+
+    public RgfDynamicDictionary? RowData { get; }
+
+    public IEnumerable<RgfProperty>? Properties { get; }
 }

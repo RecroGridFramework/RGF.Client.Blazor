@@ -4,21 +4,21 @@ using Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Events;
 
-public enum FormViewEventKind
+public enum RgfFormEventKind
 {
     FormDataInitialized,
     ValidationRequested,
 }
 
-public class RgfFormViewEventArgs : EventArgs
+public class RgfFormEventArgs : EventArgs
 {
-    public RgfFormViewEventArgs(FormViewEventKind eventKind, RgfFormComponent formComponent)
+    public RgfFormEventArgs(RgfFormEventKind eventKind, RgfFormComponent formComponent)
     {
         EventKind = eventKind;
         BaseFormComponent = formComponent;
     }
 
-    public FormViewEventKind EventKind { get; }
+    public RgfFormEventKind EventKind { get; }
 
     public RgfFormComponent BaseFormComponent { get; }
 

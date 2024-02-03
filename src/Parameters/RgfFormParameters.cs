@@ -15,7 +15,7 @@ public class RgfFormParameters
 
     public string? ModifiedCssClass { get; set; }
 
-    public RgfEventDispatcher<FormViewEventKind, RgfFormViewEventArgs> EventDispatcher { get; set; } = new();
+    public RgfEventDispatcher<RgfFormEventKind, RgfFormEventArgs> EventDispatcher { get; } = new();
 
     public Func<RgfFormComponent, bool, Task<RgfResult<RgfFormResult>>>? OnSaveAsync { get; set; }
 
