@@ -37,11 +37,12 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, OnChangedGridData));
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
+        //Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommandAsync));
 
         await OnChangedGridData(new(GridData, Manager.ListHandler.GridData.Value));
     }
 
-    private async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected virtual async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
         switch (args.Args.Command)
         {
@@ -98,6 +99,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 break;
         }
     }
+
+    //private Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> args) => Task.CompletedTask;
 
     protected void QuickWatch()
     {

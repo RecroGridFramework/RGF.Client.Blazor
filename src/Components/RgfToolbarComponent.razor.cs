@@ -5,8 +5,10 @@ using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Mappings;
+using System.Text.Json;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -26,6 +28,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? SettingsMenu { get; set; }
 
+    public RenderFragment? CustomMenu { get; set; }
+
     public Func<RgfMenu, Task>? MenuSelectionCallback { get; set; }
 
     public Func<RgfMenu, Task>? MenuRenderCallback { get; set; }
@@ -42,9 +46,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
         Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, (args) => StateHasChanged()));
-        MenuSelectionCallback = SettingsMenuItemSelected;
-        MenuRenderCallback = SettingsMenuRender;
+        MenuSelectionCallback = MenuItemSelected;
+        MenuRenderCallback = MenuRender;
         CreateSettingsMenu();
+        CreateCustomMenu();
     }
 
     public virtual void OnToolbarCommand(ToolbarAction command)
@@ -54,9 +59,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? CreateSettingsMenu(object? icon = null)
     {
-        var menu = new List<RgfMenu>();
-        menu.Add(new(RgfMenuType.Function, RecroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings));
-        menu.Add(new(RgfMenuType.Function, RecroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings));
+        var menu = new List<RgfMenu>
+        {
+            new(RgfMenuType.Function, RecroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings),
+            new(RgfMenuType.Function, RecroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings)
+        };
         if (Manager.RecroSec.IsAuthenticated && !Manager.RecroSec.IsAdmin)
         {
             menu.Add(new(RgfMenuType.Function, RecroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
@@ -119,7 +126,40 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return SettingsMenu;
     }
 
-    private Task SettingsMenuItemSelected(RgfMenu menu)
+    public RenderFragment? CreateCustomMenu(object? icon = null)
+    {
+        Type? type;
+        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Menu, out type))
+        {
+            throw new NotImplementedException("The Menu template component is missing.");
+        }
+        var customMenu = Manager.EntityDesc.Options.GetStringValue("RGO_CustomMenu");
+        if (!string.IsNullOrEmpty(customMenu))
+        {
+            var menu = JsonSerializer.Deserialize<RgfMenu>(customMenu, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+            if (menu != null)
+            {
+                var param = new RgfMenuParameters()
+                {
+                    MenuItems = menu.NestedMenu,
+                    Navbar = false,
+                    Icon = icon,
+                    MenuSelectionCallback = MenuSelectionCallback,
+                    MenuRenderCallback = MenuRenderCallback
+                };
+                CustomMenu = builder =>
+                {
+                    int sequence = 0;
+                    builder.OpenComponent(sequence++, type);
+                    builder.AddAttribute(sequence++, "MenuParameters", param);
+                    builder.CloseComponent();
+                };
+            }
+        }
+        return CustomMenu;
+    }
+
+    private Task MenuItemSelected(RgfMenu menu)
     {
         var action = Toolbar.MenuCommand2ToolbarAction(menu.Command);
         if (action != ToolbarAction.Invalid)
@@ -128,15 +168,12 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         else
         {
-            if (menu.Command == Menu.EntityEditor)
-            {
-                Manager.NotificationManager.RaiseEvent(new RgfMenuEventArgs(menu.Command), this);
-            }
+            Manager.NotificationManager.RaiseEvent(new RgfMenuEventArgs(menu.Command, menu.MenuType), this);
         }
         return Task.CompletedTask;
     }
 
-    private Task SettingsMenuRender(RgfMenu menu)
+    private Task MenuRender(RgfMenu menu)
     {
         if (menu.MenuType == RgfMenuType.FunctionForRec)
         {
