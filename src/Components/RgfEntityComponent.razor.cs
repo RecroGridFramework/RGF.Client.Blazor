@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
-using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
@@ -93,12 +92,13 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager.RefreshEntity += Refresh;
         Manager.FormDataKey.OnAfterChange(this, OnChangeFormDataKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
-        Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommanAsync);
+        Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync);
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
             await InitResourcesAsync();
             _initialized = true;
+            _logger.LogDebug("RgfEntityComponent.Initialized");
         }
         else
         {
@@ -128,6 +128,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                 await CreateManagerAsync();
             }
             _initialized = true;
+            _logger.LogDebug("RgfEntityComponent.Initialized");
             StateHasChanged();
         });
     }
@@ -150,9 +151,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
     }
 
-    protected virtual void OnMenuCommanAsync(IRgfEventArgs<RgfMenuEventArgs> args)
+    private void OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        if (args.Args.Command == Menu.EntityEditor)
+        if (args.Args.Command == ToolbarAction.EntityEditor)
         {
             var param = new RgfEntityParameters("RecroGrid_Entity")
             {
