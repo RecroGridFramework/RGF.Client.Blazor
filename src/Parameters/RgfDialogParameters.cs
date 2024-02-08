@@ -56,7 +56,7 @@ public class RgfDialogParameters
         }
     }
 
-    public RenderFragment Content => ContentTemplate!;
+    public RenderFragment Content => ContentTemplate ?? ((builder) => builder.AddContent(1, ""));
 }
 
 public class ButtonParameters

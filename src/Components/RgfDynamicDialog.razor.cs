@@ -94,7 +94,10 @@ public partial class RgfDynamicDialog : ComponentBase
             }
             return Close(key);
         };
-        parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
+        if (parameters.PredefinedButtons == null)
+        {
+            parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
+        }
         _dynamicDialogs.Add(_componentCount, Create(parameters));
         StateHasChanged();
     }
