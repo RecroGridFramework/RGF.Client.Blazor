@@ -52,11 +52,6 @@ public partial class RgfGridColumnComponent : ComponentBase
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            //await JSRuntime.InvokeVoidAsync("import", "{RgfClientConfiguration.AppRootUrl}_content/Recrovit.RecroGridFramework.Client.Blazor/scripts/recrovit-rgf.js");
-            //var dotNetObjectReference = DotNetObjectReference.Create(this);
-        }
         await JSHandlerAsync();
         await base.OnAfterRenderAsync(firstRender);
     }

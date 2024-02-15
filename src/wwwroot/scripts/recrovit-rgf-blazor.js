@@ -1,8 +1,9 @@
 ﻿/*!
-* recrovit-rgf-blazor.js v1.0.0
+* recrovit-rgf-blazor.js v1.0.1
 */
 
-window.Recrovit = window.Recrovit || { RGF: {} };
+window.Recrovit = window.Recrovit || { };
+window.Recrovit.RGF = window.Recrovit.RGF || { };
 window.Recrovit.RGF.Blazor = window.Recrovit.RGF.Blazor || {};
 var Blazor = window.Recrovit.RGF.Blazor;
 

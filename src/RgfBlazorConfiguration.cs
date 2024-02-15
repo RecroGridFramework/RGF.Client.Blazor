@@ -73,9 +73,9 @@ public static class RgfBlazorConfigurationExtension
         {
             await LoadResourcesAsync(serviceProvider);
         }
-        var ver = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+        var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
-        logger?.LogInformation($"RecroGrid Framework Blazor v{ver} initialized.");
+        logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", version);
     }
 
     public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
@@ -87,7 +87,7 @@ public static class RgfBlazorConfigurationExtension
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery !== 'undefined'");
         if (!jquery)
         {
-            await jsRuntime.InvokeVoidAsync("import", $"{RgfClientConfiguration.AppRootUrl}_content/{libName}/lib/jquery/jquery.min.js");
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
         }
 
         var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences", authClient: false);
@@ -95,11 +95,11 @@ public static class RgfBlazorConfigurationExtension
         {
             foreach (var item in res.Result)
             {
-                await jsRuntime.InvokeAsync<object>("import", ApiService.BaseAddress + item);
+                await jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
             }
             await jsRuntime.InvokeVoidAsync($"{RgfBlazorConfiguration.JsWebCliNamespace}.RecroGrid.SetBaseAddress", ApiService.BaseAddress);
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + "/rgf/resource/RgfCore.css");
         }
-        await jsRuntime.InvokeVoidAsync("import", $"{RgfClientConfiguration.AppRootUrl}_content/{libName}/scripts/recrovit-rgf-blazor.js");
+        await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/recrovit-rgf-blazor.js");
     }
 }
