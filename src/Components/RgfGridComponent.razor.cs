@@ -21,7 +21,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public List<IDisposable> Disposables { get; private set; } = new();
 
-    public List<RgfDynamicDictionary> GridData { get; private set; } = new();
+    public ObservableProperty<List<RgfDynamicDictionary>> GridDataSource { get; private set; } = new([], nameof(GridDataSource));
+
+    public List<RgfDynamicDictionary> GridData => GridDataSource.Value;
+
+    public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading;
 
     public List<RgfDynamicDictionary> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
 
@@ -31,15 +35,18 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = default!;
 
+    private bool _isProcessing;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, OnChangedGridData));
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommandAsync));
+        Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (args) => _isProcessing = true));
+        Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
 
-        await OnChangedGridData(new(GridData, Manager.ListHandler.GridData.Value));
+        await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
 
     protected virtual async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
@@ -187,35 +194,31 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         return ColumnTemplate(param);
     }
 
-    protected virtual async Task OnChangedGridData(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
+    protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
     {
-        _logger.LogDebug("OnChangeGridData");
-        var EntityDesc = Manager.EntityDesc;
-        foreach (var rowData in args.NewData)
+        try
         {
-            var list = await RgfGridColumnComponent.GetRowClassAsync(_jsRuntime, EntityDesc, rowData);
-            var attributes = new RgfDynamicDictionary();
-            attributes["class"] = list.Any() ? string.Join(" ", list) : null;
-            list = await RgfGridColumnComponent.GetRowStyleAsync(_jsRuntime, EntityDesc, rowData);
-            attributes["style"] = list.Any() ? string.Join(";", list) : null;
-
-            foreach (var prop in EntityDesc.SortedVisibleColumns)
+            _logger.LogDebug("OnChangeGridData");
+            var EntityDesc = Manager.EntityDesc;
+            var prop4RowStyles = EntityDesc.Properties.Where(e => e.Options?.Any(e => e.Key == "RGO_JSRowClass" || e.Key == "RGO_JSRowStyle") == true).ToArray();
+            var prop4ColStyles = EntityDesc.SortedVisibleColumns.Where(e => e.Options?.Any(e => e.Key == "RGO_JSColClass" || e.Key == "RGO_JSColStyle") == true).ToArray();
+            foreach (var rowData in args.NewData)
             {
-                list = await RgfGridColumnComponent.GetCellClassAsync(_jsRuntime, EntityDesc, prop, rowData);
-                attributes[$"class-{prop.Alias}"] = list.Any() ? string.Join(" ", list) : null;
-                list = await RgfGridColumnComponent.GetCellStyleAsync(_jsRuntime, EntityDesc, prop, rowData);
-                attributes[$"style-{prop.Alias}"] = list.Any() ? string.Join(";", list) : null;
+                await RgfGridColumnComponent.InitStylesAsync(_jsRuntime, EntityDesc, rowData, prop4RowStyles, prop4ColStyles);
+                var eventArgs = new RgfGridEventArgs(RgfGridEventKind.CreateAttributes, this, rowData: rowData);
+                await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
             }
-            rowData["__attributes"] = attributes;
-            var eventArgs = new RgfGridEventArgs(RgfGridEventKind.CreateAttributes, this, rowData: rowData);
-            await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
-        }
-        GridData = args.NewData;
+            GridDataSource.Value = args.NewData;
 
-        if (SelectedItems.Any())
+            if (SelectedItems.Any())
+            {
+                SelectedItems.Clear();
+                await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+            }
+        }
+        finally
         {
-            SelectedItems.Clear();
-            await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+            _isProcessing = false;
         }
     }
 

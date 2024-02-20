@@ -45,7 +45,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         base.OnInitialized();
 
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
-        Disposables.Add(Manager.ListHandler.GridData.OnAfterChange(this, (args) => StateHasChanged()));
+        Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (args) => StateHasChanged()));
         MenuSelectionCallback = MenuItemSelected;
         MenuRenderCallback = MenuRender;
         CreateSettingsMenu();

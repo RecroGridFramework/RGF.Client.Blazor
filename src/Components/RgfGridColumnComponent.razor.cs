@@ -92,15 +92,39 @@ public partial class RgfGridColumnComponent : ComponentBase
     }
 
     #region Row/Cell Style
-    public static Task<List<string>> GetRowClassAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData) => GetRowStyleAsync("RGO_JSRowClass", jsRuntime, entityDesc, rowData);
-    public static Task<List<string>> GetRowStyleAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData) => GetRowStyleAsync("RGO_JSRowStyle", jsRuntime, entityDesc, rowData);
-    private static async Task<List<string>> GetRowStyleAsync(string key, IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData)
+    public static async Task InitStylesAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData, IEnumerable<RgfProperty> prop4RowStyles, IEnumerable<RgfProperty> prop4ColStyles)
+    {
+        var attributes = rowData.GetMember("__attributes") as RgfDynamicDictionary;
+        if (attributes == null)
+        {
+            attributes = new RgfDynamicDictionary();
+            rowData["__attributes"] = attributes;
+        }
+        var list = await GetRowClassAsync(jsRuntime, entityDesc, rowData, prop4RowStyles);
+        attributes["class"] = list.Any() ? string.Join(" ", list) : null;
+        list = await GetRowStyleAsync(jsRuntime, entityDesc, rowData, prop4RowStyles);
+        attributes["style"] = list.Any() ? string.Join(";", list) : null;
+
+        foreach (var prop in prop4ColStyles)
+        {
+            list = await GetCellClassAsync(jsRuntime, entityDesc, prop, rowData);
+            attributes[$"class-{prop.Alias}"] = list.Any() ? string.Join(" ", list) : null;
+            list = await GetCellStyleAsync(jsRuntime, entityDesc, prop, rowData);
+            attributes[$"style-{prop.Alias}"] = list.Any() ? string.Join(";", list) : null;
+        }
+    }
+
+    public static Task<List<string>> GetRowClassAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData, IEnumerable<RgfProperty>? prop4Styles = null) => GetRowStyleAsync("RGO_JSRowClass", jsRuntime, entityDesc, rowData, prop4Styles);
+
+    public static Task<List<string>> GetRowStyleAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData, IEnumerable<RgfProperty>? prop4Styles = null) => GetRowStyleAsync("RGO_JSRowStyle", jsRuntime, entityDesc, rowData, prop4Styles);
+
+    private static async Task<List<string>> GetRowStyleAsync(string key, IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData, IEnumerable<RgfProperty>? prop4Styles = null)
     {
         var list = new List<string>();
         char separator = key == "RGO_JSRowClass" ? ' ' : ';';
         if (entityDesc.Options?.TryGetValue(key, out object? val) == true)
         {
-            var jsArgs = RgfGridColumnComponent.CreateJSArgs(entityDesc, rowData);
+            var jsArgs = CreateJSArgs(entityDesc, rowData);
             var css = await jsRuntime.InvokeAsync<string>(RgfBlazorConfiguration.JsBlazorNamespace + ".invokeGridColFuncAsync", val, jsArgs);
             if (!string.IsNullOrWhiteSpace(css))
             {
@@ -108,9 +132,9 @@ public partial class RgfGridColumnComponent : ComponentBase
             }
         }
 
-        foreach (var prop in entityDesc.Properties.Where(e => e.Options?.Any(o => o.Key == key) == true))
+        foreach (var prop in (prop4Styles ?? entityDesc.Properties).Where(e => e.Options?.Any(o => o.Key == key) == true))
         {
-            var jsArgs = RgfGridColumnComponent.CreateJSArgs(entityDesc, rowData, prop);
+            var jsArgs = CreateJSArgs(entityDesc, rowData, prop);
             var fn = prop.Options.GetStringValue(key);
             var css = await jsRuntime.InvokeAsync<string>(RgfBlazorConfiguration.JsBlazorNamespace + ".invokeGridColFuncAsync", fn, jsArgs);
             if (!string.IsNullOrWhiteSpace(css))
@@ -127,7 +151,9 @@ public partial class RgfGridColumnComponent : ComponentBase
         list.AddRange(await GetCellStyleAsync("RGO_JSColClass", jsRuntime, entityDesc, rgfProperty, rowData));
         return list;
     }
+
     public static Task<List<string>> GetCellStyleAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfProperty propDesc, RgfDynamicDictionary rowData) => GetCellStyleAsync("RGO_JSColStyle", jsRuntime, entityDesc, propDesc, rowData);
+
     public static async Task<List<string>> GetCellStyleAsync(string key, IJSRuntime jsRuntime, RgfEntity entityDesc, RgfProperty propDesc, RgfDynamicDictionary rowData)
     {
         var list = new List<string>();
