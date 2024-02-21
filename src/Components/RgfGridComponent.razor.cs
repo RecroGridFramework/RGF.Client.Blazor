@@ -42,7 +42,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         await base.OnInitializedAsync();
 
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommandAsync));
+        Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommand));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (args) => _isProcessing = true));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
 
@@ -107,9 +107,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
-    private void OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
+    private void OnMenuCommand(IRgfEventArgs<RgfMenuEventArgs> arg)
     {
-        _logger.LogDebug("OnMenuCommandAsync: {type}:{command}", arg.Args.MenuType, arg.Args.Command);
+        _logger.LogDebug("OnMenuCommand: {type}:{command}", arg.Args.MenuType, arg.Args.Command);
     }
 
     protected void QuickWatch()

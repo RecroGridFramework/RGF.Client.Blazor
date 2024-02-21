@@ -22,7 +22,7 @@
     <Authors>$(Company)</Authors>
     <PackageOutputPath>..\..\dist</PackageOutputPath>
     <PackageProjectUrl>https://recrogrid.com/</PackageProjectUrl>
-    <Description>$(Title)</Description>
+    <Description>RecroGrid Framework Blazor UI Abstraction</Description>
     <PackageTags>RecroGrid Framework Client Blazor</PackageTags>
     <RepositoryUrl>https://github.com/RecroGridFramework/RGF.Client.Blazor.git</RepositoryUrl>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
