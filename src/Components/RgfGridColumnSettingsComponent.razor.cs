@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
-using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Events;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -21,7 +21,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public RgfDialogParameters DialogParameters { get; set; } = new();
 
-    private IRgManager Manager => GridComponent.Manager;
+    private IRgManager Manager => BaseGridComponent.Manager;
 
     private IRecroDictService RecroDict => Manager.RecroDict;
 
@@ -77,9 +77,9 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         }
 
         DialogParameters.OnClose = Close; //We'll reset it in case the dialog might have overwritten it
-        if (GridComponent.EntityParameters.DialogTemplate != null)
+        if (BaseGridComponent.EntityParameters.DialogTemplate != null)
         {
-            _settingsDialog = GridComponent.EntityParameters.DialogTemplate(DialogParameters);
+            _settingsDialog = BaseGridComponent.EntityParameters.DialogTemplate(DialogParameters);
         }
         else
         {
@@ -113,7 +113,8 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         bool changed = await Manager.ListHandler.SetVisibleColumnsAsync(Columns);
         if (changed)
         {
-            await GridComponent.EntityParameters.GridParameters.Events.ColumnSettingsChanged.InvokeAsync(new DataEventArgs<IEnumerable<RgfProperty>>(Manager.EntityDesc.SortedVisibleColumns));
+            var eventArgs = new RgfGridEventArgs(RgfGridEventKind.ColumnSettingsChanged, BaseGridComponent, properties: Manager.EntityDesc.SortedVisibleColumns);
+            await BaseGridComponent.EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
         }
     }
 

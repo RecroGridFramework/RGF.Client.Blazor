@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
-using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -93,16 +93,20 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager.RefreshEntity += Refresh;
         Manager.FormDataKey.OnAfterChange(this, OnChangeFormDataKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
-        Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommanAsync);
+        Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync);
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
             await InitResourcesAsync();
             _initialized = true;
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+            _logger.LogDebug("RgfEntityComponent.Initialized");
         }
         else
         {
-            _ = EntityParameters.DestroyEvent.InvokeAsync(EventArgs.Empty);
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
     }
 
@@ -128,6 +132,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                 await CreateManagerAsync();
             }
             _initialized = true;
+            _logger.LogDebug("RgfEntityComponent.Initialized");
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
             StateHasChanged();
         });
     }
@@ -136,7 +143,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     {
         if (args.Args.Origin == UserMessageOrigin.Global)
         {
-            _dynamicDialog.Alert(args.Args.Title, args.Args.Message);
+            _dynamicDialog.Dialog(args.Args);
         }
     }
 
@@ -146,13 +153,14 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         EntityParameters.FormParameters!.EntityKey = FormDataKey ?? new();
         if (EntityParameters.FormOnly && FormDataKey == null)
         {
-            _ = EntityParameters.DestroyEvent.InvokeAsync(EventArgs.Empty);
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager!);
+            _ = EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
     }
 
-    protected virtual void OnMenuCommanAsync(IRgfEventArgs<RgfMenuEventArgs> args)
+    private void OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        if (args.Args.Command == Menu.EntityEditor)
+        if (args.Args.Command == ToolbarAction.EntityEditor)
         {
             var param = new RgfEntityParameters("RecroGrid_Entity")
             {
@@ -164,7 +172,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                     }
                 }
             };
-            param.DestroyEvent.Subscribe(e =>
+            param.EventDispatcher.Subscribe(RgfEntityEventKind.Destroy, (arg) =>
             {
                 _entityEditor = null;
                 StateHasChanged();

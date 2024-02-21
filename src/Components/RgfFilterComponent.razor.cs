@@ -6,8 +6,6 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -58,6 +56,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
         FilterParameters = EntityParameters.FilterParameters;
         FilterParameters.DialogParameters.Title = RecroDict.GetRgfUiString("Filter");
+        FilterParameters.DialogParameters.UniqueName = "filter-" + Manager.EntityDesc.NameVersion.ToLower();
         FilterParameters.DialogParameters.ShowCloseButton = true;
         FilterParameters.DialogParameters.ContentTemplate = FilterTemplate(this);
         FilterParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
@@ -106,6 +105,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     {
         _logger.LogDebug("RgfFilter.Close");
         _showComponent = false;
+        FilterParameters.DialogParameters.Destroy?.Invoke();
         StateHasChanged();
         return true;
     }

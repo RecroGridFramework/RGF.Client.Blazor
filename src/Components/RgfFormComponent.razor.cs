@@ -127,7 +127,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         var res = await FormHandler.InitializeAsync(entityKey);
         if (res.Success)
         {
-            return InitFormData(res.Result);
+            return await InitFormDataAsync(res.Result);
         }
         return false;
     }
@@ -173,7 +173,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             int sequence = 0;
             builder.OpenComponent<RgfFormValidationComponent>(sequence++);
-            builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.FormComponent), this);
+            builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.BaseFormComponent), this);
             builder.AddAttribute(sequence++, nameof(RgfFormValidationComponent.ChildContent), FormValidationTemplate(this));
             builder.AddComponentReferenceCapture(sequence++, (component) => FormValidation = (RgfFormValidationComponent)component);
             builder.CloseComponent();
@@ -247,7 +247,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         StateHasChanged();
     }
 
-    private bool InitFormData(RgfFormResult formResult)
+    private async Task<bool> InitFormDataAsync(RgfFormResult formResult)
     {
         if (FormHandler.InitFormData(formResult, out FormViewData? formData) && formData != null)
         {
@@ -257,8 +257,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 //RemoveStyleSheet = await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + _formViewData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
-            var eventArgs = new RgfFormViewEventArgs(FormViewEventKind.FormDataInitialized, this);
-            FormParameters.EventDispatcher.DispatchEvent(eventArgs.EventKind, new RgfEventArgs<RgfFormViewEventArgs>(this, eventArgs));
+            var eventArgs = new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this);
+            await FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
             _logger.LogDebug("FormDataInitialized");
             return true;
         }
@@ -324,7 +324,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             }
             if (refresh)
             {
-                InitFormData(res.Result);
+                await InitFormDataAsync(res.Result);
             }
             if (res.Messages != null)
             {

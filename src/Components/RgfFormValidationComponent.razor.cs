@@ -6,9 +6,6 @@ using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -19,7 +16,7 @@ public partial class RgfFormValidationComponent : ComponentBase
 
     public bool IsValid => !CurrentEditContext.GetValidationMessages().Any();
 
-    private IRgManager Manager => FormComponent.Manager;
+    private IRgManager Manager => BaseFormComponent.Manager;
 
     private ValidationMessageStore _messageStore { get; set; } = null!;
 
@@ -39,7 +36,7 @@ public partial class RgfFormValidationComponent : ComponentBase
         CurrentEditContext.OnValidationStateChanged += (source, arg) => { HasErrors = CurrentEditContext.GetValidationMessages().Any(); StateHasChanged(); };
         CurrentEditContext.OnValidationRequested += (source, arg) => OnValidationRequested();
         CurrentEditContext.OnFieldChanged += (source, arg) => OnFieldChanged(arg.FieldIdentifier);
-        CurrentEditContext.SetFieldCssClassProvider(new RgfFieldCssClassProvider(FormComponent));
+        CurrentEditContext.SetFieldCssClassProvider(new RgfFieldCssClassProvider(BaseFormComponent));
     }
 
     private void OnFieldChanged(in FieldIdentifier fieldIdentifier)
@@ -49,15 +46,15 @@ public partial class RgfFormValidationComponent : ComponentBase
             CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
             return;
         }
-        FormComponent._logger.LogDebug("OnFieldChanged: {FieldName}", fieldIdentifier.FieldName);
+        BaseFormComponent._logger.LogDebug("OnFieldChanged: {FieldName}", fieldIdentifier.FieldName);
         string alias = fieldIdentifier.FieldName;
-        var property = FormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties)).SingleOrDefault(e => e.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase));
+        var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties)).SingleOrDefault(e => e.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase));
         if (property != null)
         {
-            if (!FormComponent.FormHandler.IsModified(FormComponent.FormData, property))
+            if (!BaseFormComponent.FormHandler.IsModified(BaseFormComponent.FormData, property))
             {
                 CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
-                FormComponent._logger.LogDebug("MarkAsUnmodified: {FieldName}", fieldIdentifier.FieldName);
+                BaseFormComponent._logger.LogDebug("MarkAsUnmodified: {FieldName}", fieldIdentifier.FieldName);
             }
             OnValidationRequested(fieldIdentifier);
         }
@@ -69,15 +66,15 @@ public partial class RgfFormValidationComponent : ComponentBase
         {
             return;
         }
-        FormComponent._logger.LogDebug("OnValidationRequested: {FieldName}", fieldIdentifier.FieldName);
-        var eventArgs = new RgfFormViewEventArgs(FormViewEventKind.ValidationRequested, FormComponent);
+        BaseFormComponent._logger.LogDebug("OnValidationRequested: {FieldName}", fieldIdentifier.FieldName);
+        var eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent);
         if (string.IsNullOrEmpty(fieldIdentifier.FieldName))
         {
             _messageStore.Clear();
-            var properties = FormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties));
+            var properties = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties));
             foreach (var property in properties)
             {
-                var fid = new FieldIdentifier(FormComponent.FormData.DataRec, property.Alias);
+                var fid = new FieldIdentifier(BaseFormComponent.FormData.DataRec, property.Alias);
                 RequiredValidator(fid, property);
             }
         }
@@ -85,7 +82,7 @@ public partial class RgfFormValidationComponent : ComponentBase
         {
             eventArgs.FieldId = fieldIdentifier;
             var alias = fieldIdentifier.FieldName;
-            var property = FormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties).Where(e => e.Alias.Equals(alias))).SingleOrDefault();
+            var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties).Where(e => e.Alias.Equals(alias))).SingleOrDefault();
             if (property != null)
             {
                 eventArgs.Property = property;
@@ -93,8 +90,9 @@ public partial class RgfFormValidationComponent : ComponentBase
                 RequiredValidator(fieldIdentifier, property);
             }
         }
-        FormComponent.FormParameters.EventDispatcher.DispatchEvent(eventArgs.EventKind, new RgfEventArgs<RgfFormViewEventArgs>(this, eventArgs));
-        CurrentEditContext.NotifyValidationStateChanged();
+        _ = BaseFormComponent.FormParameters.EventDispatcher
+            .DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs))
+            .ContinueWith(t => CurrentEditContext.NotifyValidationStateChanged());
     }
 
     private void RequiredValidator(FieldIdentifier fieldIdentifier, RgfForm.Property property)
@@ -110,7 +108,7 @@ public partial class RgfFormValidationComponent : ComponentBase
             case PropertyFormType.HtmlEditor:
                 if (property.PropertyDesc.Editable && property.PropertyDesc.Required)
                 {
-                    var data = FormComponent.FormData.DataRec.GetItemData(property.Alias);
+                    var data = BaseFormComponent.FormData.DataRec.GetItemData(property.Alias);
                     if (string.IsNullOrEmpty(data.ToString()))
                     {
                         var message = Manager.RecroDict.GetRgfUiString("FieldIsRequired");
@@ -133,7 +131,7 @@ public partial class RgfFormValidationComponent : ComponentBase
         AddFieldError(fieldIdentifier, message, notifyValidationStateChanged);
     }
 
-    public void AddFieldError(string alias, string message, bool notifyValidationStateChanged = true) => AddFieldError(new FieldIdentifier(FormComponent.FormData.DataRec, alias), message, notifyValidationStateChanged);
+    public void AddFieldError(string alias, string message, bool notifyValidationStateChanged = true) => AddFieldError(new FieldIdentifier(BaseFormComponent.FormData.DataRec, alias), message, notifyValidationStateChanged);
 
     public void AddFieldError(in FieldIdentifier fieldIdentifier, string message, bool notifyValidationStateChanged = true)
     {
@@ -146,7 +144,7 @@ public partial class RgfFormValidationComponent : ComponentBase
 
     public void AddGlobalError(string message, bool notifyValidationStateChanged = true)
     {
-        _messageStore.Add(new FieldIdentifier(FormComponent.FormData.DataRec, string.Empty), message);
+        _messageStore.Add(new FieldIdentifier(BaseFormComponent.FormData.DataRec, string.Empty), message);
         if (notifyValidationStateChanged)
         {
             CurrentEditContext.NotifyValidationStateChanged();
@@ -156,7 +154,7 @@ public partial class RgfFormValidationComponent : ComponentBase
     public void NotifyFieldChanged(RgfFormItemParameters formItemParameters)
     {
         var property = formItemParameters.Property;
-        FormComponent._logger.LogDebug("NotifyFieldChanged: {Alias}", property.Alias);
+        BaseFormComponent._logger.LogDebug("NotifyFieldChanged: {Alias}", property.Alias);
         if (property.ForeignEntity?.EntityKeys.Any() == true)
         {
             //If the selector field is typed into, the previous key should be deleted
@@ -164,7 +162,7 @@ public partial class RgfFormValidationComponent : ComponentBase
             var fkProp = Manager.EntityDesc.Properties.SingleOrDefault(e => e.Id == ek!.Foreign);
             if (fkProp != null)
             {
-                this.FormComponent.FormData.DataRec.Remove(fkProp.Alias);
+                this.BaseFormComponent.FormData.DataRec.Remove(fkProp.Alias);
             }
         }
         if (formItemParameters.ItemData.Value != null && formItemParameters.ItemData.ToString().Equals(string.Empty))
@@ -173,7 +171,7 @@ public partial class RgfFormValidationComponent : ComponentBase
         }
         else
         {
-            CurrentEditContext.NotifyFieldChanged(new FieldIdentifier(FormComponent.FormData.DataRec, property.Alias));
+            CurrentEditContext.NotifyFieldChanged(new FieldIdentifier(BaseFormComponent.FormData.DataRec, property.Alias));
         }
     }
 }
@@ -182,10 +180,10 @@ public class RgfFieldCssClassProvider : FieldCssClassProvider
 {
     public RgfFieldCssClassProvider(RgfFormComponent formComponent)
     {
-        FormComponent = formComponent;
+        BaseFormComponent = formComponent;
     }
 
-    public RgfFormComponent FormComponent { get; }
+    public RgfFormComponent BaseFormComponent { get; }
 
     public override string GetFieldCssClass(EditContext editContext, in FieldIdentifier fieldIdentifier)
     {
@@ -195,11 +193,11 @@ public class RgfFieldCssClassProvider : FieldCssClassProvider
             fieldId = new FieldIdentifier(editContext.Model, dynamicData.Name);
         }
 
-        var formPar = FormComponent.FormParameters;
+        var formPar = BaseFormComponent.FormParameters;
         var cssClass = base.GetFieldCssClass(editContext, fieldId);
-        var property = FormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties)).FirstOrDefault(e => e.Alias.Equals(fieldId.FieldName, StringComparison.OrdinalIgnoreCase));
+        var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties)).FirstOrDefault(e => e.Alias.Equals(fieldId.FieldName, StringComparison.OrdinalIgnoreCase));
         if (editContext.GetValidationMessages(fieldId).Any() ||
-            FormComponent.FormData.DataRec.GetMember(fieldId.FieldName) == null && property?.PropertyDesc.Editable == true && property?.PropertyDesc.Required == true)
+            BaseFormComponent.FormData.DataRec.GetMember(fieldId.FieldName) == null && property?.PropertyDesc.Editable == true && property?.PropertyDesc.Required == true)
         {
             cssClass = Regex.Replace(cssClass, @"\b" + Regex.Escape("valid") + @"\b", "");
             if (!cssClass.Contains("invalid"))
@@ -215,7 +213,7 @@ public class RgfFieldCssClassProvider : FieldCssClassProvider
         {
             cssClass = $"{cssClass} {formPar.ModifiedCssClass}";
         }
-        //FormComponent._logger.LogDebug("GetFieldCssClass: {FieldName}, CssClass: {cssClass}", fieldId.FieldName, cssClass);
+        //BaseFormComponent._logger.LogDebug("GetFieldCssClass: {FieldName}, CssClass: {cssClass}", fieldId.FieldName, cssClass);
         return cssClass.Trim();
     }
 }
