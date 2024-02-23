@@ -5,7 +5,7 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Events;
 
 public enum RgfGridEventKind
 {
-    CreateAttributes,
+    CreateRowData,
     ColumnSettingsChanged
 }
 
