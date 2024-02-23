@@ -194,17 +194,61 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         return ColumnTemplate(param);
     }
 
+    private void CreateAttributes(RgfEntity entityDesc, RgfDynamicDictionary rowData)
+    {
+        if (rowData.TryGetMember("__rgparams", out object? rgparams) && rgparams is Dictionary<string, object> par &&
+            par.TryGetValue("Options", out var op) && op is Dictionary<string, object> options)
+        {
+            var attributes = rowData.GetOrNew<RgfDynamicDictionary>("__attributes");
+            foreach (var option in options.Where(o => o.Value != null))
+            {
+                if (option.Value is Dictionary<string, object> propOptions)
+                {
+                    foreach (var propOption in propOptions.Where(o => o.Value != null))
+                    {
+                        var prop = entityDesc.Properties.FirstOrDefault(e => e.Alias.Equals(option.Key, StringComparison.OrdinalIgnoreCase) || e.ClientName.Equals(option.Key, StringComparison.OrdinalIgnoreCase));
+                        if (prop != null)
+                        {
+                            var propAttributes = attributes.GetOrNew<RgfDynamicDictionary>(prop.Alias);
+                            if (propOption.Key.Equals("class", StringComparison.OrdinalIgnoreCase) || propOption.Key.Equals("RGOD_CssClass", StringComparison.OrdinalIgnoreCase))
+                            {
+                                propAttributes.Set<string>("class", (old) => string.IsNullOrEmpty(old) ? propOption.Value.ToString()! : $"{old.Trim()} {propOption.Value}");
+                            }
+                            else if (propOption.Key.Equals("style", StringComparison.OrdinalIgnoreCase) || propOption.Key.Equals("RGOD_Style", StringComparison.OrdinalIgnoreCase))
+                            {
+                                propAttributes.Set<string>("style", (old) => string.IsNullOrEmpty(old) ? propOption.Value.ToString()! : $"{old.Trim(';')};{propOption.Value}");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (option.Key.Equals("class", StringComparison.OrdinalIgnoreCase) || option.Key.Equals("RGOD_CssClass", StringComparison.OrdinalIgnoreCase))
+                    {
+                        attributes.Set<string>("class", (old) => string.IsNullOrEmpty(old) ? option.Value.ToString()! : $"{old.Trim()} {option.Value}");
+                    }
+                    else if (option.Key.Equals("style", StringComparison.OrdinalIgnoreCase) || option.Key.Equals("RGOD_Style", StringComparison.OrdinalIgnoreCase))
+                    {
+                        attributes.Set<string>("style", (old) => string.IsNullOrEmpty(old) ? option.Value.ToString()! : $"{old.Trim(';')};{option.Value}");
+                    }
+                }
+            }
+        }
+    }
+
     protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
     {
         try
         {
             _logger.LogDebug("OnChangeGridData");
-            var EntityDesc = Manager.EntityDesc;
-            var prop4RowStyles = EntityDesc.Properties.Where(e => e.Options?.Any(e => e.Key == "RGO_JSRowClass" || e.Key == "RGO_JSRowStyle") == true).ToArray();
-            var prop4ColStyles = EntityDesc.SortedVisibleColumns.Where(e => e.Options?.Any(e => e.Key == "RGO_JSColClass" || e.Key == "RGO_JSColStyle") == true).ToArray();
+            var entityDesc = Manager.EntityDesc;
+            var rgo = new string[] { "RGO_CssClass", "RGO_Style", "RGO_JSRowClass", "RGO_JSRowStyle" };
+            var prop4RowStyles = entityDesc.Properties.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
+            var prop4ColStyles = entityDesc.SortedVisibleColumns.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
             foreach (var rowData in args.NewData)
             {
-                await RgfGridColumnComponent.InitStylesAsync(_jsRuntime, EntityDesc, rowData, prop4RowStyles, prop4ColStyles);
+                CreateAttributes(entityDesc, rowData);
+                await RgfGridColumnComponent.InitStylesAsync(_jsRuntime, entityDesc, rowData, prop4RowStyles, prop4ColStyles);
                 var eventArgs = new RgfGridEventArgs(RgfGridEventKind.CreateAttributes, this, rowData: rowData);
                 await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
             }
