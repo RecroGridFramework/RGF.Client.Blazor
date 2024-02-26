@@ -168,7 +168,15 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         else
         {
-            Manager.NotificationManager.RaiseEvent(new RgfMenuEventArgs(menu.Command, menu.MenuType), this);
+            RgfDynamicDictionary? data = default;
+            RgfEntityKey? entityKey = default;
+            if (menu.MenuType == RgfMenuType.FunctionForRec && this.IsSingleSelectedRow)
+            {
+                data = Manager.SelectedItems.Value[0];
+                Manager.ListHandler.GetEntityKey(data, out entityKey);
+            }
+            var arg = new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data);
+            Manager.NotificationManager.RaiseEvent(arg, this);
         }
         return Task.CompletedTask;
     }
@@ -187,11 +195,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         _dynamicDialog.Choice(
             RecroDict.GetRgfUiString("Delete"),
             RecroDict.GetRgfUiString("DelConfirm"),
-            new List<ButtonParameters>()
-            {
-                    new ButtonParameters(RecroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(ToolbarAction.Delete)),
-                    new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
-            },
+            [
+                new(RecroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(ToolbarAction.Delete)),
+                new(RecroDict.GetRgfUiString("No"), isPrimary:true)
+            ],
             DialogType.Warning);
     }
 
