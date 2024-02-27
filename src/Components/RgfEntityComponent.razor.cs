@@ -8,6 +8,7 @@ using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using Recrovit.RecroGridFramework.Client.Models;
 using Recrovit.RecroGridFramework.Client.Services;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -47,7 +48,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     private bool _initialized = false;
 
-    private RgfEntityKey? FormDataKey { get; set; }
+    private bool _showFormView { get; set; }
 
     private string? EntityName { get; set; }
 
@@ -84,14 +85,14 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             EntityName = this.EntityParameters.EntityName,
             Skeleton = true,
             SelectParam = EntityParameters.SelectParam,
-            EntityKey = EntityParameters.FormParameters?.EntityKey,
+            EntityKey = EntityParameters.FormParameters?.FormViewKey.EntityKey,
             ListParam = EntityParameters.ListParam,
             CustomParams = EntityParameters.CustomParams
         };
 
         Manager = new RgManager(param, _serviceProvider);
         Manager.RefreshEntity += Refresh;
-        Manager.FormDataKey.OnAfterChange(this, OnChangeFormDataKey);
+        Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
         Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync);
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
@@ -147,11 +148,11 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
     }
 
-    protected virtual void OnChangeFormDataKey(ObservablePropertyEventArgs<RgfEntityKey?> args)
+    protected virtual void OnChangeFormViewKey(ObservablePropertyEventArgs<FormViewKey?> args)
     {
-        FormDataKey = args.NewData;
-        EntityParameters.FormParameters!.EntityKey = FormDataKey ?? new();
-        if (EntityParameters.FormOnly && FormDataKey == null)
+        _showFormView = args.NewData != null;
+        EntityParameters.FormParameters.FormViewKey = args.NewData ?? new();
+        if (EntityParameters.FormOnly && !_showFormView)
         {
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager!);
             _ = EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));

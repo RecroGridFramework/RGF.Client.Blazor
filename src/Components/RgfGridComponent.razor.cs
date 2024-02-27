@@ -119,7 +119,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
         {
             var param = new RgfEntityParameters("QuickWatch", Manager.SessionParams);
-            param.FormParameters.EntityKey = entityKey;
+            param.FormParameters.FormViewKey.EntityKey = entityKey;
             RgfDialogParameters dialogParameters = new()
             {
                 IsModal = false,
@@ -162,7 +162,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         var data = SelectedItems.FirstOrDefault();
         if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
         {
-            param.FormParameters.EntityKey = entityKey;
+            param.FormParameters.FormViewKey.EntityKey = entityKey;
         }
         RgfDialogParameters dialogParameters = new()
         {
@@ -196,9 +196,10 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     private void CreateAttributes(RgfEntity entityDesc, RgfDynamicDictionary rowData)
     {
-        if (rowData.TryGetMember("__rgparams", out object? rgparams) && rgparams is Dictionary<string, object> par &&
-            par.TryGetValue("Options", out var op) && op is Dictionary<string, object> options)
+        var rgparams = rowData.Get<Dictionary<string, object>>("__rgparams");
+        if (rgparams?.TryGetValue("Options", out var op) == true && op is Dictionary<string, object> options)
         {
+            _logger.LogDebug("CreateAttributes");
             var attributes = rowData.GetOrNew<RgfDynamicDictionary>("__attributes");
             foreach (var option in options.Where(o => o.Value != null))
             {

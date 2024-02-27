@@ -101,7 +101,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     {
         await base.OnParametersSetAsync();
 
-        var key = FormParameters.EntityKey;
+        var key = FormParameters.FormViewKey.EntityKey;
         if (_previousEntityKey?.Equals(key) != true)
         {
             _previousEntityKey = key;
@@ -186,7 +186,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             FormParameters.DialogParameters.Destroy();
         }
-        Manager.FormDataKey.Value = null;
+        Manager.FormViewKey.Value = null;
     }
 
     public virtual bool OnClose()
@@ -219,7 +219,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
             _selectDialogParameters = new()
             {
-                IsModal = true,
                 Resizable = true,
                 ShowCloseButton = true,
                 UniqueName = "select-" + Manager.EntityDesc.NameVersion.ToLower(),
@@ -378,7 +377,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public void Dispose()
     {
         ShowDialog = false;
-        Manager.FormDataKey.Value = null;
+        Manager.FormViewKey.Value = null;
         this.DisposeFormComponent();
     }
 }
