@@ -38,6 +38,8 @@ public class RgfDialogParameters
 
     public IEnumerable<ButtonParameters>? PredefinedButtons { get; set; }
 
+    public IEnumerable<ButtonParameters>? LeftButtons { get; set; }
+
     public bool NoHeader { get; set; } = default!;
 
     public RenderFragment Header
@@ -62,17 +64,37 @@ public class RgfDialogParameters
 public class ButtonParameters
 {
     public ButtonParameters() { Callback = (arg) => Task.CompletedTask; }
-    public ButtonParameters(string? childText, Action<MouseEventArgs>? callback, bool isPrimary = false) : this(childText, (arg) => { callback?.Invoke(arg); return Task.CompletedTask; }, isPrimary) { }
-    public ButtonParameters(string? childText, Func<MouseEventArgs, Task>? callbackAsync = null, bool isPrimary = false)
+
+    public ButtonParameters(string iconName, string title, Action<MouseEventArgs>? callback, string? cssClass = null) : this(null, (arg) => { callback?.Invoke(arg); return Task.CompletedTask; }, cssClass: cssClass, iconName: iconName, title: title) { }
+
+    public ButtonParameters(string iconName, string title, Func<MouseEventArgs, Task>? callbackAsync = null, string? cssClass = null) : this(null, callbackAsync, cssClass: cssClass, iconName: iconName, title: title) { }
+
+    public ButtonParameters(string? childText, Action<MouseEventArgs>? callback, bool isPrimary = false, string? cssClass = null) : this(childText, (arg) => { callback?.Invoke(arg); return Task.CompletedTask; }, isPrimary, cssClass: cssClass) { }
+
+    public ButtonParameters(string? childText, Func<MouseEventArgs, Task>? callbackAsync = null, bool isPrimary = false, string? cssClass = null, string? iconName = null, string? minWidth = null, string? title = null)
     {
         ChildText = childText;
+        Title = title;
         Callback = callbackAsync ?? ((arg) => Task.CompletedTask);
         IsPrimary = isPrimary;
+        CssClass = cssClass;
+        IconName = iconName;
+        MinWidth = minWidth ?? (iconName == null ? "4.5rem" : null);
     }
 
     public string? ChildText { get; set; }
 
+    public string? CssClass { get; set; }
+
+    public string? IconName { get; set; }
+
+    public string? Title { get; set; }
+
     public bool IsPrimary { get; set; } = false;
+
+    public bool Disabled { get; set; }
+
+    public string? MinWidth { get; set; }
 
     public RenderFragment? ChildContent { get; set; }
 

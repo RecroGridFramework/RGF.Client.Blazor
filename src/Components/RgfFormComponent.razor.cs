@@ -120,6 +120,46 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         }
     }
 
+    public Task<bool> NextFormItem() => NextOrPrevFormItem(true, false);
+
+    public Task<bool> PrevFormItem() => NextOrPrevFormItem(false, false);
+
+    private async Task<bool> NextOrPrevFormItem(bool next, bool ignoreChanges)
+    {
+        if (!ignoreChanges && CurrentEditContext.IsModified())
+        {
+            _dynamicDialog.Choice(
+                RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
+                RecroDict.GetRgfUiString("UnsavedConfirm"),
+                [
+                    new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
+                        var success = await BeginSaveAsync(false);
+                        if(success)
+                        {
+                            await NextOrPrevFormItem(next, false);
+                        }
+                    }),
+                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => NextOrPrevFormItem(next, true)),
+                    new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
+                ],
+                DialogType.Warning);
+
+            return false;
+        }
+        var rowIndex = FormParameters.FormViewKey.RowIndex;
+        if (rowIndex != -1)
+        {
+            int idx = next ? rowIndex + 1 : rowIndex - 1;
+            var rowData = await Manager.ListHandler.EnsureVisibleAsync(idx);
+            if (rowData != null)
+            {
+                await Manager.SelectedItems.SetValueAsync([rowData]);
+                Manager.NotificationManager.RaiseEvent(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+            }
+        }
+        return true;
+    }
+
     public async Task<bool> ParametersSetAsync(RgfEntityKey entityKey)
     {
         FormEditMode = entityKey.IsEmpty ? FormEditMode.Create : FormEditMode.Update;
@@ -196,12 +236,11 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             _dynamicDialog.Choice(
                 RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
                 RecroDict.GetRgfUiString("UnsavedConfirm"),
-                new List<ButtonParameters>()
-                {
+                [
                     new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => await BeginSaveAsync(true)),
                     new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => Close()),
                     new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
-                },
+                ],
                 DialogType.Warning);
 
             return false;
@@ -266,41 +305,44 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual bool Validate() => CurrentEditContext.Validate();
 
-    public virtual async Task BeginSaveAsync(bool close)
+    public virtual async Task<bool> BeginSaveAsync(bool close)
     {
         if (Validate())
         {
             var res = await SaveAsync(!close);
-            if (!res.Success)
+            if (res.Success)
             {
-                if (res.Messages?.Error != null)
+                if (close)
                 {
-                    foreach (var item in res.Messages.Error)
+                    Close();
+                }
+                return true;
+            }
+
+            if (res.Messages?.Error != null)
+            {
+                foreach (var item in res.Messages.Error)
+                {
+                    if (item.Key.Equals(RgfMessages.MessageDialog))
                     {
-                        if (item.Key.Equals(RgfMessages.MessageDialog))
+                        _dynamicDialog.Alert(RecroDict.GetRgfUiString("Error"), item.Value);
+                    }
+                    else
+                    {
+                        var prop = this.Manager.EntityDesc.Properties.FirstOrDefault(e => e.ClientName == item.Key);
+                        if (prop != null)
                         {
-                            _dynamicDialog.Alert(RecroDict.GetRgfUiString("Error"), item.Value);
+                            FormValidation?.AddFieldError(prop.Alias, item.Value);
                         }
                         else
                         {
-                            var prop = this.Manager.EntityDesc.Properties.FirstOrDefault(e => e.ClientName == item.Key);
-                            if (prop != null)
-                            {
-                                FormValidation?.AddFieldError(prop.Alias, item.Value);
-                            }
-                            else
-                            {
-                                FormValidation?.AddGlobalError(item.Value);
-                            }
+                            FormValidation?.AddGlobalError(item.Value);
                         }
                     }
                 }
             }
-            else if (close)
-            {
-                Close();
-            }
         }
+        return false;
     }
 
     public async Task<RgfResult<RgfFormResult>> SaveAsync(bool refresh)
