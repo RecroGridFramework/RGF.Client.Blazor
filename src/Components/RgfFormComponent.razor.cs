@@ -120,44 +120,45 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         }
     }
 
-    public Task<bool> NextFormItem() => NextOrPrevFormItem(true, false);
+    public Task NextFormItemAsync() => NextOrPrevFormItemAsync(true, false);
 
-    public Task<bool> PrevFormItem() => NextOrPrevFormItem(false, false);
+    public Task PrevFormItemAsync() => NextOrPrevFormItemAsync(false, false);
 
-    private async Task<bool> NextOrPrevFormItem(bool next, bool ignoreChanges)
+    private async Task NextOrPrevFormItemAsync(bool next, bool ignoreChanges)
     {
-        if (!ignoreChanges && CurrentEditContext.IsModified())
-        {
-            _dynamicDialog.Choice(
-                RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
-                RecroDict.GetRgfUiString("UnsavedConfirm"),
-                [
-                    new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
-                        var success = await BeginSaveAsync(false);
-                        if(success)
-                        {
-                            await NextOrPrevFormItem(next, false);
-                        }
-                    }),
-                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => NextOrPrevFormItem(next, true)),
-                    new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
-                ],
-                DialogType.Warning);
-
-            return false;
-        }
         var rowIndex = FormParameters.FormViewKey.RowIndex;
         if (rowIndex != -1)
         {
-            int idx = next ? rowIndex + 1 : rowIndex - 1;
-            var rowData = await Manager.ListHandler.EnsureVisibleAsync(idx);
-            if (rowData != null)
+            if (ignoreChanges || !CurrentEditContext.IsModified())
             {
-                await Manager.SelectedItems.SetValueAsync([rowData]);
-                Manager.NotificationManager.RaiseEvent(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+                int idx = next ? rowIndex + 1 : rowIndex - 1;
+                var rowData = await Manager.ListHandler.EnsureVisibleAsync(idx);
+                if (rowData != null)
+                {
+                    await Manager.SelectedItems.SetValueAsync([rowData]);
+                    await Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+                }
+            }
+            else
+            {
+                _dynamicDialog.Choice(
+                    RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
+                    RecroDict.GetRgfUiString("UnsavedConfirm"),
+                    [
+                        new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) =>
+                    {
+                        var success = await BeginSaveAsync(false);
+                        if(success)
+                        {
+                            await NextOrPrevFormItemAsync(next, false);
+                        }
+                    }),
+                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => NextOrPrevFormItemAsync(next, true)),
+                    new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
+                    ],
+                    DialogType.Warning);
             }
         }
-        return true;
     }
 
     public async Task<bool> ParametersSetAsync(RgfEntityKey entityKey)
@@ -287,7 +288,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     private async Task<bool> InitFormDataAsync(RgfFormResult formResult)
     {
-        if (FormHandler.InitFormData(formResult, out FormViewData? formData) && formData != null)
+        if (FormHandler?.InitFormData(formResult, out FormViewData? formData) == true && formData != null)
         {
             FormData = formData;
             if (!RemoveStyleSheet && !string.IsNullOrEmpty(FormData.StyleSheetUrl))

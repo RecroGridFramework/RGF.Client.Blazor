@@ -52,10 +52,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         CreateCustomMenu();
     }
 
-    public virtual void OnToolbarCommand(ToolbarAction command)
-    {
-        Manager.NotificationManager.RaiseEvent(new RgfToolbarEventArgs(command), this);
-    }
+    public virtual Task OnToolbarCommand(ToolbarAction command) => Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(command), this);
 
     public RenderFragment? CreateSettingsMenu(object? icon = null)
     {
@@ -159,12 +156,12 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return CustomMenu;
     }
 
-    private Task MenuItemSelected(RgfMenu menu)
+    private async Task MenuItemSelected(RgfMenu menu)
     {
         var action = Toolbar.MenuCommand2ToolbarAction(menu.Command);
         if (action != ToolbarAction.Invalid)
         {
-            OnToolbarCommand(action);
+            await OnToolbarCommand(action);
         }
         else
         {
@@ -176,9 +173,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 Manager.ListHandler.GetEntityKey(data, out entityKey);
             }
             var arg = new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data);
-            Manager.NotificationManager.RaiseEvent(arg, this);
+            await Manager.NotificationManager.RaiseEventAsync(arg, this);
         }
-        return Task.CompletedTask;
     }
 
     private Task MenuRender(RgfMenu menu)

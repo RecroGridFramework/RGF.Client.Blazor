@@ -43,7 +43,7 @@ public partial class RgfFormItemComponent : ComponentBase
     public void OnSearchEntity(string filter)
     {
         var selectParam = this.CreateSelectParam(filter);
-        Manager.NotificationManager.RaiseEvent(selectParam, this);
+        _ = Manager.NotificationManager.RaiseEventAsync(selectParam, this);
     }
 
     public RenderFragment? CreateValidationMessage(string? cssClass = null)

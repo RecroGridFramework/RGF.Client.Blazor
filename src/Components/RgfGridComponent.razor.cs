@@ -284,8 +284,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     public virtual Task OnRecordDoubleClickAsync(RgfDynamicDictionary rowData)
     {
         SelectedItems = new List<RgfDynamicDictionary>() { rowData };
-        Manager.NotificationManager.RaiseEvent(new RgfToolbarEventArgs(Manager.SelectParam != null ? ToolbarAction.Select : ToolbarAction.Read), this);
-        return Task.CompletedTask;
+        return Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(Manager.SelectParam != null ? ToolbarAction.Select : ToolbarAction.Read), this);
     }
 
     public void Dispose()
