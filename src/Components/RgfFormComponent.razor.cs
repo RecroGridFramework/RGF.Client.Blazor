@@ -120,23 +120,38 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         }
     }
 
-    public Task NextFormItemAsync() => NextOrPrevFormItemAsync(true, false);
+    public Task FirstFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : 0);
 
-    public Task PrevFormItemAsync() => NextOrPrevFormItemAsync(false, false);
+    public Task LastFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : Manager.ItemCount.Value - 1);
 
-    private async Task NextOrPrevFormItemAsync(bool next, bool ignoreChanges)
+    public Task NextFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : FormParameters.FormViewKey.RowIndex + 1);
+
+    public Task PrevFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : FormParameters.FormViewKey.RowIndex - 1);
+
+    private bool _setFormItemActive;
+
+    private async Task SetFormItemAsync(int rowIndex, bool ignoreChanges = false)
     {
-        var rowIndex = FormParameters.FormViewKey.RowIndex;
-        if (rowIndex != -1)
+        if (rowIndex >= 0)
         {
             if (ignoreChanges || !CurrentEditContext.IsModified())
             {
-                int idx = next ? rowIndex + 1 : rowIndex - 1;
-                var rowData = await Manager.ListHandler.EnsureVisibleAsync(idx);
-                if (rowData != null)
+                if (_setFormItemActive == false)
                 {
-                    await Manager.SelectedItems.SetValueAsync([rowData]);
-                    await Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+                    try
+                    {
+                        _setFormItemActive = true;
+                        var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
+                        if (rowData != null)
+                        {
+                            await Manager.SelectedItems.SetValueAsync([rowData]);
+                            await Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+                        }
+                    }
+                    finally
+                    {
+                        _setFormItemActive = false;
+                    }
                 }
             }
             else
@@ -150,10 +165,10 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                         var success = await BeginSaveAsync(false);
                         if(success)
                         {
-                            await NextOrPrevFormItemAsync(next, false);
+                            await SetFormItemAsync(rowIndex);
                         }
                     }),
-                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => NextOrPrevFormItemAsync(next, true)),
+                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => SetFormItemAsync(rowIndex, true)),
                     new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
                     ],
                     DialogType.Warning);
