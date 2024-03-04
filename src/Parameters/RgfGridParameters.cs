@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Recrovit.RecroGridFramework.Client.Blazor.Components;
-using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Events;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
@@ -11,5 +10,5 @@ public class RgfGridParameters
 
     public RenderFragment<RgfGridComponent>? ColumnSettingsTemplate { get; set; }
 
-    public RgfEventDispatcher<RgfGridEventKind, RgfGridEventArgs> EventDispatcher { get; } = new();
+    public RgfEventDispatcher<RgfListEventKind, RgfListEventArgs> EventDispatcher { get; } = new();
 }

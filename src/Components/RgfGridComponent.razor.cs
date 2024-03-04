@@ -4,7 +4,6 @@ using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
-using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -250,8 +249,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             {
                 CreateAttributes(entityDesc, rowData);
                 await RgfGridColumnComponent.InitStylesAsync(_jsRuntime, entityDesc, rowData, prop4RowStyles, prop4ColStyles);
-                var eventArgs = new RgfGridEventArgs(RgfGridEventKind.CreateRowData, this, rowData: rowData);
-                await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfGridEventArgs>(this, eventArgs));
+                var eventArgs = new RgfListEventArgs(RgfListEventKind.CreateRowData, this, rowData);
+                await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
             }
             GridDataSource.Value = args.NewData;
 
