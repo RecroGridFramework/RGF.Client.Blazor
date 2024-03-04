@@ -171,7 +171,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             Manager.ListHandler.GetEntityKey(data, out entityKey);
         }
         var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data));
-        await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(menu.Command, eventArgs);
+        var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(menu.Command, eventArgs);
+        if (!handled)
+        {
+            await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(Manager.RecroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
+        }
     }
 
     private async Task OnSettingsMenu(RgfMenu menu)

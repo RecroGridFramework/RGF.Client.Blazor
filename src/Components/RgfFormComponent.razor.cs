@@ -26,7 +26,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     [Inject]
     public IJSRuntime JsRuntime { get; private set; } = null!;
 
-    public RgfFormParameters FormParameters { get; private set; } = default!;
+    public RgfFormParameters FormParameters => EntityParameters.FormParameters;
 
     public EditContext CurrentEditContext { get; private set; } = default!;
 
@@ -62,10 +62,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfSelectParam>(this, OnSelectGrid));
+        FormParameters.EventDispatcher.Subscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync, true);
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage));
 
-        FormParameters = EntityParameters.FormParameters;
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
@@ -265,10 +264,10 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         return true;
     }
 
-    protected virtual void OnSelectGrid(IRgfEventArgs<RgfSelectParam> args)
+    protected virtual Task OnFindEntityAsync(IRgfEventArgs<RgfFormEventArgs> arg)
     {
-        _logger.LogDebug("RgfFormComponent.OnSelectGrid");
-        _selectParam = args.Args;
+        _logger.LogDebug("OnFindEntity");
+        _selectParam = arg.Args.SelectParam;
         if (_selectParam != null)
         {
             _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
@@ -282,7 +281,10 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             };
             _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
+            StateHasChanged();
+            arg.Handled = true;
         }
+        return Task.CompletedTask;
     }
 
     protected virtual void OnGridItemSelected(CancelEventArgs args)
@@ -311,8 +313,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 //RemoveStyleSheet = await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + _formViewData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
-            var eventArgs = new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this);
-            await FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
+            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
+            await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
             _logger.LogDebug("FormDataInitialized");
             return true;
         }

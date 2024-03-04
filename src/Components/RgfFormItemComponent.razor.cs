@@ -1,15 +1,19 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
+using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfFormItemComponent : ComponentBase
 {
-    public string ErrorCssClass => FormItemParameters.BaseFormComponent.FormParameters.ErrorCssClass ?? "";
+    public RgfFormParameters FormParameters => FormItemParameters.BaseFormComponent.FormParameters;
 
-    public string ModifiedCssClass => FormItemParameters.BaseFormComponent.FormParameters.ModifiedCssClass ?? "";
+    public string ErrorCssClass => FormParameters.ErrorCssClass ?? "";
+
+    public string ModifiedCssClass => FormParameters.ModifiedCssClass ?? "";
 
     public string? CssClass
     {
@@ -40,10 +44,10 @@ public partial class RgfFormItemComponent : ComponentBase
         //BaseFormComponent.FormValidation?.AddFieldError(_fieldId, $"Custom error");
     }
 
-    public void OnSearchEntity(string filter)
+    public Task FindEntityAsync(string filter)
     {
-        var selectParam = this.CreateSelectParam(filter);
-        _ = Manager.NotificationManager.RaiseEventAsync(selectParam, this);
+        var eventArgs = new RgfFormEventArgs(RgfFormEventKind.FindEntity, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
+        return FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
     }
 
     public RenderFragment? CreateValidationMessage(string? cssClass = null)
