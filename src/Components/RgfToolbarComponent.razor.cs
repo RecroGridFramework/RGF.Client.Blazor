@@ -52,7 +52,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         CreateCustomMenu();
     }
 
-    public virtual Task OnToolbarCommand(ToolbarAction command) => Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(command), this);
+    public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind)
+    {
+        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(eventKind));
+        return ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
+    }
 
     public RenderFragment? CreateSettingsMenu(object? icon = null)
     {
@@ -159,7 +163,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     private async Task MenuItemSelected(RgfMenu menu)
     {
         var action = Toolbar.MenuCommand2ToolbarAction(menu.Command);
-        if (action != ToolbarAction.Invalid)
+        if (action != RgfToolbarEventKind.Invalid)
         {
             await OnToolbarCommand(action);
         }
@@ -192,7 +196,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             RecroDict.GetRgfUiString("Delete"),
             RecroDict.GetRgfUiString("DelConfirm"),
             [
-                new(RecroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(ToolbarAction.Delete)),
+                new(RecroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(RgfToolbarEventKind.Delete)),
                 new(RecroDict.GetRgfUiString("No"), isPrimary:true)
             ],
             DialogType.Warning);

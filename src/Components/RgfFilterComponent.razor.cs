@@ -12,11 +12,9 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 public partial class RgfFilterComponent : ComponentBase, IDisposable
 {
     [Inject]
-    private  ILogger<RgfFilterComponent> _logger { get; set; } = null!;
+    private ILogger<RgfFilterComponent> _logger { get; set; } = null!;
 
     public RgfFilterParameters FilterParameters { get; private set; } = default!;
-
-    public List<IDisposable> Disposables { get; private set; } = new();
 
     public RgfFilter.Condition? Condition { get; private set; }
 
@@ -52,7 +50,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter, true);
 
         FilterParameters = EntityParameters.FilterParameters;
         FilterParameters.DialogParameters.Title = RecroDict.GetRgfUiString("Filter");
@@ -63,16 +61,14 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         FilterParameters.DialogParameters.Resizable = FilterParameters.DialogParameters.Resizable ?? true;
     }
 
-    protected virtual async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected virtual async Task OnShowFilter(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        if (args.Args.Command == ToolbarAction.ShowFilter)
-        {
-            _logger.LogDebug("RgfFilter.ShowFilter");
-            FilterHandler = await Manager.GetFilterHandlerAsync();
-            Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
-            IsFilterActive = Manager.IsFiltered || !FilterHandler.Conditions.Any();
-            Open();
-        }
+        _logger.LogDebug("RgfFilter.ShowFilter");
+        FilterHandler = await Manager.GetFilterHandlerAsync();
+        Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
+        IsFilterActive = Manager.IsFiltered || !FilterHandler.Conditions.Any();
+        Open();
+        args.Handled = true;
     }
 
     private void Open()
@@ -87,6 +83,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
             _filterDialog = RgfDynamicDialog.Create(FilterParameters.DialogParameters, _logger);
         }
         _showComponent = true;
+        StateHasChanged();
     }
 
     public void OnClose(MouseEventArgs? args)
@@ -184,10 +181,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        if (Disposables != null)
-        {
-            Disposables.ForEach(disposable => disposable.Dispose());
-            Disposables = null!;
-        }
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter);
     }
 }

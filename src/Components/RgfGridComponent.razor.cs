@@ -18,7 +18,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = default!;
 
-    public List<IDisposable> Disposables { get; private set; } = new();
+    public List<IDisposable> Disposables { get; private set; } = [];
 
     public ObservableProperty<List<RgfDynamicDictionary>> GridDataSource { get; private set; } = new([], nameof(GridDataSource));
 
@@ -40,7 +40,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         await base.OnInitializedAsync();
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe([RgfToolbarEventKind.QueryString, RgfToolbarEventKind.RgfAbout], OnToolbarCommanAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.QuickWatch, OnQuickWatchAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ExportCsv, OnExportCsvAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.RecroTrack, OnRecroTrackAsync, true);
+
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommand));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (args) => _isProcessing = true));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
@@ -48,11 +52,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
 
-    protected virtual async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        switch (args.Args.Command)
+        switch (args.Args.EventKind)
         {
-            case ToolbarAction.QueryString:
+            case RgfToolbarEventKind.QueryString:
                 {
                     RgfDialogParameters parameters = new()
                     {
@@ -72,10 +76,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                         }
                     };
                     _dynamicDialog.Dialog(parameters);
+                    args.Handled = true;
                 }
                 break;
 
-            case ToolbarAction.RgfAbout:
+            case RgfToolbarEventKind.RgfAbout:
                 {
                     var about = await Manager.AboutAsync();
                     RgfDialogParameters parameters = new()
@@ -89,19 +94,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                         }
                     };
                     _dynamicDialog.Dialog(parameters);
+                    args.Handled = true;
                 }
-                break;
-
-            case ToolbarAction.QuickWatch:
-                QuickWatch();
-                break;
-
-            case ToolbarAction.ExportCsv:
-                await ExportCsvAsync();
-                break;
-
-            case ToolbarAction.RecroTrack:
-                RecroTrack();
                 break;
         }
     }
@@ -111,7 +105,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         _logger.LogDebug("OnMenuCommand: {type}:{command}", arg.Args.MenuType, arg.Args.Command);
     }
 
-    protected void QuickWatch()
+    protected Task OnQuickWatchAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
         _logger.LogDebug("RgfGridComponent.QuickWatch");
         var data = SelectedItems.FirstOrDefault();
@@ -129,9 +123,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             };
             _dynamicDialog.Dialog(dialogParameters);
         }
+        args.Handled = true;
+        return Task.CompletedTask;
     }
 
-    protected async Task ExportCsvAsync()
+    protected async Task OnExportCsvAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
         var listSeparator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
@@ -152,9 +148,10 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 }
             }
         }
+        args.Handled = true;
     }
 
-    protected void RecroTrack()
+    protected Task OnRecroTrackAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
         _logger.LogDebug("RgfGridComponent.RecroTrack");
         var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
@@ -172,6 +169,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             ContentTemplate = RgfEntityComponent.Create(param, _logger),
         };
         _dynamicDialog.Dialog(dialogParameters);
+        args.Handled = true;
+        return Task.CompletedTask;
     }
 
     public RenderFragment CreateColumnSettings()
@@ -269,21 +268,22 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     public virtual async Task RowSelectHandlerAsync(RgfDynamicDictionary rowData)
     {
         //TODO: __rgparam SelectedItems.Add(rowData);
-        SelectedItems = new List<RgfDynamicDictionary>() { rowData };
+        SelectedItems = [rowData];
         await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
     }
 
     public virtual async Task RowDeselectHandlerAsync(RgfDynamicDictionary rowData)
     {
         //TODO: __rgparam SelectedItems.Remove(rowData);
-        SelectedItems = new List<RgfDynamicDictionary>();
+        SelectedItems = [];
         await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
     }
 
     public virtual Task OnRecordDoubleClickAsync(RgfDynamicDictionary rowData)
     {
-        SelectedItems = new List<RgfDynamicDictionary>() { rowData };
-        return Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(Manager.SelectParam != null ? ToolbarAction.Select : ToolbarAction.Read), this);
+        SelectedItems = [rowData];
+        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(Manager.SelectParam != null ? RgfToolbarEventKind.Select : RgfToolbarEventKind.Read));
+        return EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
     }
 
     public void Dispose()
@@ -293,5 +293,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             Disposables.ForEach(disposable => disposable.Dispose());
             Disposables = null!;
         }
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe([RgfToolbarEventKind.QueryString, RgfToolbarEventKind.RgfAbout], OnToolbarCommanAsync);
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.QuickWatch, OnQuickWatchAsync);
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ExportCsv, OnExportCsvAsync);
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroTrack, OnRecroTrackAsync);
     }
 }

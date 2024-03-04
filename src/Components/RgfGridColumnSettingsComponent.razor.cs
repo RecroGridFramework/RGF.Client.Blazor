@@ -14,8 +14,6 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     [Inject]
     private ILogger<RgfGridColumnSettingsComponent> _logger { get; set; } = null!;
 
-    public List<IDisposable> Disposables { get; private set; } = new();
-
     public GridColumnSettings[] Columns { get; private set; } = null!;
 
     public RgfDialogParameters DialogParameters { get; set; } = new();
@@ -30,7 +28,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarComman));
+        BaseGridComponent.EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ColumnSettings, ShowColumnSettingsAsync, true);
 
         DialogParameters.Title = RecroDict.GetRgfUiString("ColSettings");
         DialogParameters.ShowCloseButton = true;
@@ -49,17 +47,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         }
     }
 
-    protected virtual void OnToolbarComman(IRgfEventArgs<RgfToolbarEventArgs> args)
-    {
-        switch (args.Args.Command)
-        {
-            case ToolbarAction.ColumnSettings:
-                ShowDialog();
-                break;
-        }
-    }
-
-    public void ShowDialog()
+    public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
         Columns = Manager.EntityDesc.Properties
             .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity)
@@ -84,6 +72,9 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         {
             _settingsDialog = RgfDynamicDialog.Create(DialogParameters, _logger);
         }
+        args.Handled = true;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     public void OnClose(MouseEventArgs? arg)
@@ -119,10 +110,6 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        if (Disposables != null)
-        {
-            Disposables.ForEach(disposable => disposable.Dispose());
-            Disposables = null!;
-        }
+        BaseGridComponent.EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ColumnSettings, ShowColumnSettingsAsync);
     }
 }

@@ -1,12 +1,8 @@
-﻿using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Recrovit.RecroGridFramework.Client.Events;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfToolbarParameters
 {
+    public RgfEventDispatcher<RgfToolbarEventKind, RgfToolbarEventArgs> EventDispatcher { get; } = new();
 }

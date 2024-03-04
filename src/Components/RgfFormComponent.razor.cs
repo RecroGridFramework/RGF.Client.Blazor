@@ -144,7 +144,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                         if (rowData != null)
                         {
                             await Manager.SelectedItems.SetValueAsync([rowData]);
-                            await Manager.NotificationManager.RaiseEventAsync(new RgfToolbarEventArgs(ToolbarAction.Read, rowData), this);
+                            var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, rowData));
+                            await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
                         }
                     }
                     finally
