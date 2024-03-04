@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
@@ -93,10 +94,11 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager.RefreshEntity += Refresh;
         Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
-        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.EntityEditor, OnEntityEditorAsync, true);
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.EntityEditor, OnEntityEditorAsync, true);
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
-            [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select, RgfToolbarEventKind.SaveSettings, RgfToolbarEventKind.ResetSettings],
+            [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
             Manager.OnToolbarCommandAsync, true);
+
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
@@ -161,7 +163,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
     }
 
-    private Task OnEntityEditorAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    private Task OnEntityEditorAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
         var param = new RgfEntityParameters("RecroGrid_Entity")
         {
@@ -186,12 +188,12 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.EntityEditor, OnEntityEditorAsync);
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.EntityEditor, OnEntityEditorAsync);
         if (Manager != null)
         {
             _logger.LogDebug("Manager.Dispose: {EntityName}", this.EntityName);
             EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(
-                [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select, RgfToolbarEventKind.SaveSettings, RgfToolbarEventKind.ResetSettings],
+                [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
                 Manager.OnToolbarCommandAsync);
             Manager.Dispose();
             Manager = null;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
@@ -28,7 +29,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        BaseGridComponent.EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ColumnSettings, ShowColumnSettingsAsync, true);
+        BaseGridComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.ColumnSettings, ShowColumnSettingsAsync, true);
 
         DialogParameters.Title = RecroDict.GetRgfUiString("ColSettings");
         DialogParameters.ShowCloseButton = true;
@@ -47,7 +48,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         }
     }
 
-    public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
         Columns = Manager.EntityDesc.Properties
             .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity)
@@ -110,6 +111,6 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        BaseGridComponent.EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ColumnSettings, ShowColumnSettingsAsync);
+        BaseGridComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.ColumnSettings, ShowColumnSettingsAsync);
     }
 }

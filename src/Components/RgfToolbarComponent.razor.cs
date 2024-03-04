@@ -1,19 +1,22 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
-using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using Recrovit.RecroGridFramework.Client.Mappings;
 using System.Text.Json;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfToolbarComponent : ComponentBase, IDisposable
 {
+    [Inject]
+    private ILogger<RgfToolbarComponent> _logger { get; set; } = default!;
+
     public List<IDisposable> Disposables { get; private set; } = new();
 
     public RgfSelectParam? SelectParam => Manager.SelectParam;
@@ -30,8 +33,6 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? CustomMenu { get; set; }
 
-    public Func<RgfMenu, Task>? MenuSelectionCallback { get; set; }
-
     public Func<RgfMenu, Task>? MenuRenderCallback { get; set; }
 
     private IRecroDictService RecroDict => Manager.RecroDict;
@@ -46,7 +47,6 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (args) => StateHasChanged()));
-        MenuSelectionCallback = MenuItemSelected;
         MenuRenderCallback = MenuRender;
         CreateSettingsMenu();
         CreateCustomMenu();
@@ -114,7 +114,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             MenuItems = menu,
             Navbar = false,
             Icon = icon,
-            MenuSelectionCallback = MenuSelectionCallback,
+            MenuSelectionCallback = OnSettingsMenu,
             MenuRenderCallback = MenuRenderCallback
         };
         SettingsMenu = builder =>
@@ -145,7 +145,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                     MenuItems = menu.NestedMenu,
                     Navbar = false,
                     Icon = icon,
-                    MenuSelectionCallback = MenuSelectionCallback,
+                    MenuSelectionCallback = OnMenuCommand,
                     MenuRenderCallback = MenuRenderCallback
                 };
                 CustomMenu = builder =>
@@ -160,24 +160,52 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return CustomMenu;
     }
 
-    private async Task MenuItemSelected(RgfMenu menu)
+    private async Task OnMenuCommand(RgfMenu menu)
     {
-        var action = Toolbar.MenuCommand2ToolbarAction(menu.Command);
-        if (action != RgfToolbarEventKind.Invalid)
+        _logger.LogDebug("OnMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
+        RgfDynamicDictionary? data = default;
+        RgfEntityKey? entityKey = default;
+        if (menu.MenuType == RgfMenuType.FunctionForRec && this.IsSingleSelectedRow)
         {
-            await OnToolbarCommand(action);
+            data = Manager.SelectedItems.Value[0];
+            Manager.ListHandler.GetEntityKey(data, out entityKey);
         }
-        else
+        var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data));
+        await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(menu.Command, eventArgs);
+    }
+
+    private async Task OnSettingsMenu(RgfMenu menu)
+    {
+        switch (menu.Command)
         {
-            RgfDynamicDictionary? data = default;
-            RgfEntityKey? entityKey = default;
-            if (menu.MenuType == RgfMenuType.FunctionForRec && this.IsSingleSelectedRow)
-            {
-                data = Manager.SelectedItems.Value[0];
-                Manager.ListHandler.GetEntityKey(data, out entityKey);
-            }
-            var arg = new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data);
-            await Manager.NotificationManager.RaiseEventAsync(arg, this);
+            case Menu.SaveSettings:
+                await Manager.SaveColumnSettingsAsync(Manager.ListHandler.GetGridSettings());
+                break;
+
+            case Menu.ResetSettings:
+                await Manager.SaveColumnSettingsAsync(new RgfGridSettings(), true);
+                break;
+
+            case Menu.RgfAbout:
+                {
+                    var about = await Manager.AboutAsync();
+                    RgfDialogParameters parameters = new()
+                    {
+                        Title = "About RecroGrid Framework",
+                        ShowCloseButton = true,
+                        ContentTemplate = (builder) =>
+                        {
+                            int sequence = 0;
+                            builder.AddMarkupContent(sequence++, about);
+                        }
+                    };
+                    _dynamicDialog.Dialog(parameters);
+                }
+                break;
+
+            default:
+                await OnMenuCommand(menu);
+                break;
         }
     }
 

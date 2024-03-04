@@ -40,72 +40,63 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         await base.OnInitializedAsync();
 
-        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe([RgfToolbarEventKind.QueryString, RgfToolbarEventKind.RgfAbout], OnToolbarCommanAsync, true);
-        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.QuickWatch, OnQuickWatchAsync, true);
-        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ExportCsv, OnExportCsvAsync, true);
-        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.RecroTrack, OnRecroTrackAsync, true);
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync, true);
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfMenuEventArgs>(this, OnMenuCommand));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (args) => _isProcessing = true));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
 
         await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
 
-    protected async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected async Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
     {
-        switch (args.Args.EventKind)
+        switch (arg.Args.Command)
         {
-            case RgfToolbarEventKind.QueryString:
-                {
-                    RgfDialogParameters parameters = new()
-                    {
-                        Title = "QueryString",
-                        ShowCloseButton = true,
-                        Resizable = true,
-                        Width = "800px",
-                        Height = "600px",
-                        ContentTemplate = (builder) =>
-                        {
-                            int sequence = 0;
-                            builder.OpenElement(sequence++, "textarea");
-                            builder.AddAttribute(sequence++, "type", "text");
-                            builder.AddAttribute(sequence++, "style", "width:100%;height:100%;");
-                            builder.AddContent(sequence++, Manager.ListHandler.QueryString ?? "?");
-                            builder.CloseElement();
-                        }
-                    };
-                    _dynamicDialog.Dialog(parameters);
-                    args.Handled = true;
-                }
+            case Menu.QueryString:
+                ShowQueryString();
+                arg.Handled = true;
                 break;
 
-            case RgfToolbarEventKind.RgfAbout:
-                {
-                    var about = await Manager.AboutAsync();
-                    RgfDialogParameters parameters = new()
-                    {
-                        Title = "About RecroGrid Framework",
-                        ShowCloseButton = true,
-                        ContentTemplate = (builder) =>
-                        {
-                            int sequence = 0;
-                            builder.AddMarkupContent(sequence++, about);
-                        }
-                    };
-                    _dynamicDialog.Dialog(parameters);
-                    args.Handled = true;
-                }
+            case Menu.QuickWatch:
+                QuickWatch();
+                arg.Handled = true;
+                break;
+
+            case Menu.RecroTrack:
+                RecroTrack();
+                arg.Handled = true;
+                break;
+
+            case Menu.ExportCsv:
+                await ExportCsvAsync();
+                arg.Handled = true;
                 break;
         }
     }
 
-    private void OnMenuCommand(IRgfEventArgs<RgfMenuEventArgs> arg)
+    protected void ShowQueryString()
     {
-        _logger.LogDebug("OnMenuCommand: {type}:{command}", arg.Args.MenuType, arg.Args.Command);
+        RgfDialogParameters parameters = new()
+        {
+            Title = "QueryString",
+            ShowCloseButton = true,
+            Resizable = true,
+            Width = "800px",
+            Height = "600px",
+            ContentTemplate = (builder) =>
+            {
+                int sequence = 0;
+                builder.OpenElement(sequence++, "textarea");
+                builder.AddAttribute(sequence++, "type", "text");
+                builder.AddAttribute(sequence++, "style", "width:100%;height:100%;");
+                builder.AddContent(sequence++, Manager.ListHandler.QueryString ?? "?");
+                builder.CloseElement();
+            }
+        };
+        _dynamicDialog.Dialog(parameters);
     }
 
-    protected Task OnQuickWatchAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected void QuickWatch()
     {
         _logger.LogDebug("RgfGridComponent.QuickWatch");
         var data = SelectedItems.FirstOrDefault();
@@ -123,11 +114,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             };
             _dynamicDialog.Dialog(dialogParameters);
         }
-        args.Handled = true;
-        return Task.CompletedTask;
     }
 
-    protected async Task OnExportCsvAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected async Task ExportCsvAsync()
     {
         var listSeparator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
@@ -148,10 +137,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 }
             }
         }
-        args.Handled = true;
     }
 
-    protected Task OnRecroTrackAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected void RecroTrack()
     {
         _logger.LogDebug("RgfGridComponent.RecroTrack");
         var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
@@ -169,8 +157,6 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             ContentTemplate = RgfEntityComponent.Create(param, _logger),
         };
         _dynamicDialog.Dialog(dialogParameters);
-        args.Handled = true;
-        return Task.CompletedTask;
     }
 
     public RenderFragment CreateColumnSettings()
@@ -288,14 +274,12 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync);
+
         if (Disposables != null)
         {
             Disposables.ForEach(disposable => disposable.Dispose());
             Disposables = null!;
         }
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe([RgfToolbarEventKind.QueryString, RgfToolbarEventKind.RgfAbout], OnToolbarCommanAsync);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.QuickWatch, OnQuickWatchAsync);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ExportCsv, OnExportCsvAsync);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroTrack, OnRecroTrackAsync);
     }
 }
