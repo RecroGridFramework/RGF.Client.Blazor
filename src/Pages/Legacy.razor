@@ -1,4 +1,4 @@
-﻿@page "/rgf/entity/{EntityName}"
+﻿@page "/rgf/admin/{EntityName?}"
 
 @using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 @using Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -33,12 +33,8 @@
     {
         if (!string.IsNullOrEmpty(EntityName))
         {
-            var entityParameters = new RgfEntityParameters(EntityName)
-                {
-                    Language = _recroSec.UserLanguage,
-                    TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>)
-            };
-            _entity = RgfEntityComponent.Create(entityParameters);
+            var entityParameters = new RgfEntityParameters(EntityName) { Language = _recroSec.UserLanguage };
+            _entity =@<RgfLegacyComponent EntityParameters="@entityParameters" />;
         }
         else
         {

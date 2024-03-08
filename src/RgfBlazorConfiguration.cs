@@ -36,7 +36,6 @@ public class RgfBlazorConfiguration
     }
 
     public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
-    public static readonly string JsWebCliNamespace = "Recrovit.WebCli";
 }
 
 public static class RgfBlazorConfigurationExtension
@@ -84,7 +83,7 @@ public static class RgfBlazorConfigurationExtension
         var api = serviceProvider.GetRequiredService<IRgfApiService>();
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
 
-        bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery !== 'undefined'");
+        bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery != 'undefined'");
         if (!jquery)
         {
             await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
@@ -93,13 +92,16 @@ public static class RgfBlazorConfigurationExtension
         var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences", authClient: false);
         if (res.Success)
         {
-            foreach (var item in res.Result)
+            SriptReferences = res.Result;
+            foreach (var item in SriptReferences)
             {
                 await jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
             }
-            await jsRuntime.InvokeVoidAsync($"{RgfBlazorConfiguration.JsWebCliNamespace}.RecroGrid.SetBaseAddress", ApiService.BaseAddress);
-            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + "/rgf/resource/RgfCore.css");
+            await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
+            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
         }
         await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/recrovit-rgf-blazor.js");
     }
+
+    internal static string[] SriptReferences { get; set; } = [];
 }
