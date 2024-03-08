@@ -170,9 +170,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             data = Manager.SelectedItems.Value[0];
             Manager.ListHandler.GetEntityKey(data, out entityKey);
         }
-        var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(menu.Command, menu.MenuType, entityKey, data));
-        var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(menu.Command, eventArgs);
-        if (!handled)
+        var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
+        var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.MenuType, entityKey, data));
+        var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
+        if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
             await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(Manager.RecroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
         }
