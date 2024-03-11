@@ -20,6 +20,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     [Inject]
     private IRecroSecService _recroSec { get; set; } = null!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public List<IDisposable> Disposables { get; private set; } = new();
 
     public RgfSelectParam? SelectParam => Manager.SelectParam;
@@ -37,8 +40,6 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     public RenderFragment? CustomMenu { get; set; }
 
     public Func<RgfMenu, Task>? MenuRenderCallback { get; set; }
-
-    private IRecroDictService RecroDict => Manager.RecroDict;
 
     public RgfToolbarParameters ToolbarParameters { get => EntityParameters.ToolbarParameters; }
 
@@ -65,12 +66,12 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     {
         var menu = new List<RgfMenu>
         {
-            new(RgfMenuType.Function, RecroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings),
-            new(RgfMenuType.Function, RecroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings)
+            new(RgfMenuType.Function, _recroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings),
+            new(RgfMenuType.Function, _recroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings)
         };
         if (_recroSec.IsAuthenticated && !_recroSec.IsAdmin)
         {
-            menu.Add(new(RgfMenuType.Function, RecroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
+            menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
         }
         menu.Add(new(RgfMenuType.Divider));
         if (Manager.EntityDesc.IsRecroTrackReadable)
@@ -178,7 +179,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
         if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
-            await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(Manager.RecroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
+            await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
         }
     }
 
@@ -229,11 +230,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     public void OnDelete()
     {
         _dynamicDialog.Choice(
-            RecroDict.GetRgfUiString("Delete"),
-            RecroDict.GetRgfUiString("DelConfirm"),
+            _recroDict.GetRgfUiString("Delete"),
+            _recroDict.GetRgfUiString("DelConfirm"),
             [
-                new(RecroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(RgfToolbarEventKind.Delete)),
-                new(RecroDict.GetRgfUiString("No"), isPrimary:true)
+                new(_recroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(RgfToolbarEventKind.Delete)),
+                new(_recroDict.GetRgfUiString("No"), isPrimary:true)
             ],
             DialogType.Warning);
     }

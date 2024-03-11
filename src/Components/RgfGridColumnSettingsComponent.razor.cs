@@ -15,13 +15,14 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     [Inject]
     private ILogger<RgfGridColumnSettingsComponent> _logger { get; set; } = null!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public GridColumnSettings[] Columns { get; private set; } = null!;
 
     public RgfDialogParameters DialogParameters { get; set; } = new();
 
     private IRgManager Manager => BaseGridComponent.Manager;
-
-    private IRecroDictService RecroDict => Manager.RecroDict;
 
     private RenderFragment? _settingsDialog { get; set; }
 
@@ -31,7 +32,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
         BaseGridComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.ColumnSettings, ShowColumnSettingsAsync, true);
 
-        DialogParameters.Title = RecroDict.GetRgfUiString("ColSettings");
+        DialogParameters.Title = _recroDict.GetRgfUiString("ColSettings");
         DialogParameters.ShowCloseButton = true;
         DialogParameters.ContentTemplate = SettingsTemplate(this);
         if (FooterTemplate != null)
@@ -42,7 +43,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         {
             DialogParameters.PredefinedButtons = new List<ButtonParameters>()
             {
-                new(RecroDict.GetRgfUiString("Cancel"), OnClose),
+                new(_recroDict.GetRgfUiString("Cancel"), OnClose),
                 new("OK", (arg) => SaveAsync(), true)
             };
         }

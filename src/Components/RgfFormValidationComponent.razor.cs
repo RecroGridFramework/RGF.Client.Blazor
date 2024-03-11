@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -11,6 +12,9 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfFormValidationComponent : ComponentBase
 {
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public bool HasErrors { get; set; }
 
     public bool IsValid => !CurrentEditContext.GetValidationMessages().Any();
@@ -110,7 +114,7 @@ public partial class RgfFormValidationComponent : ComponentBase
                     var data = BaseFormComponent.FormData.DataRec.GetItemData(property.Alias);
                     if (string.IsNullOrEmpty(data.ToString()))
                     {
-                        var message = Manager.RecroDict.GetRgfUiString("FieldIsRequired");
+                        var message = _recroDict.GetRgfUiString("FieldIsRequired");
                         AddFieldError(fieldIdentifier, string.Format(message, property.Label), false);
                     }
                 }

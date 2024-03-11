@@ -42,6 +42,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = default!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
     public IRgManager? Manager { get; set; }

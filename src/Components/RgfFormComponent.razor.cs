@@ -26,6 +26,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     [Inject]
     public IJSRuntime JsRuntime { get; private set; } = null!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public RgfFormParameters FormParameters => EntityParameters.FormParameters;
 
     public EditContext CurrentEditContext { get; private set; } = default!;
@@ -41,8 +44,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public List<IDisposable> Disposables { get; private set; } = new();
 
     public IRgManager Manager { get => EntityParameters.Manager!; }
-
-    private IRecroDictService RecroDict => Manager.RecroDict;
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
@@ -84,9 +85,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
             if (edit)
             {
-                buttons.Add(new(RecroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)));
+                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)));
             }
-            buttons.Add(new(RecroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
+            buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
             if (edit)
             {
                 buttons.Add(new("OK", (arg) => BeginSaveAsync(true), true));
@@ -156,10 +157,10 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             else
             {
                 _dynamicDialog.Choice(
-                    RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
-                    RecroDict.GetRgfUiString("UnsavedConfirm"),
+                    _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
+                    _recroDict.GetRgfUiString("UnsavedConfirm"),
                     [
-                        new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) =>
+                        new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) =>
                     {
                         var success = await BeginSaveAsync(false);
                         if(success)
@@ -167,8 +168,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                             await SetFormItemAsync(rowIndex);
                         }
                     }),
-                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => SetFormItemAsync(rowIndex, true)),
-                    new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
+                    new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => SetFormItemAsync(rowIndex, true)),
+                    new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), isPrimary:true)
                     ],
                     DialogType.Warning);
             }
@@ -249,12 +250,12 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         if (CurrentEditContext.IsModified())
         {
             _dynamicDialog.Choice(
-                RecroDict.GetRgfUiString("UnsavedConfirmTitle"),
-                RecroDict.GetRgfUiString("UnsavedConfirm"),
+                _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
+                _recroDict.GetRgfUiString("UnsavedConfirm"),
                 [
-                    new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => await BeginSaveAsync(true)),
-                    new ButtonParameters(RecroDict.GetRgfUiString("No"), (arg) => Close()),
-                    new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), isPrimary:true)
+                    new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => await BeginSaveAsync(true)),
+                    new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => Close()),
+                    new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), isPrimary:true)
                 ],
                 DialogType.Warning);
 
@@ -279,7 +280,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 ContentTemplate = RgfEntityComponent.Create(new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam }, _logger),
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };
-            _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(RecroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
+            _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
             StateHasChanged();
             arg.Handled = true;
@@ -343,7 +344,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 {
                     if (item.Key.Equals(RgfMessages.MessageDialog))
                     {
-                        _dynamicDialog.Alert(RecroDict.GetRgfUiString("Error"), item.Value);
+                        _dynamicDialog.Alert(_recroDict.GetRgfUiString("Error"), item.Value);
                     }
                     else
                     {

@@ -15,6 +15,9 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     [Inject]
     private ILogger<RgfFilterComponent> _logger { get; set; } = null!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public RgfFilterParameters FilterParameters { get; private set; } = default!;
 
     public RgfFilter.Condition? Condition { get; private set; }
@@ -39,8 +42,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     private IRgManager Manager => EntityParameters.Manager!;
 
-    private IRecroDictService RecroDict => Manager.RecroDict;
-
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
     private bool _showComponent { get; set; } = false;
@@ -56,7 +57,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter, true);
 
         FilterParameters = EntityParameters.FilterParameters;
-        FilterParameters.DialogParameters.Title = RecroDict.GetRgfUiString("Filter");
+        FilterParameters.DialogParameters.Title = _recroDict.GetRgfUiString("Filter");
         FilterParameters.DialogParameters.UniqueName = "filter-" + Manager.EntityDesc.NameVersion.ToLower();
         FilterParameters.DialogParameters.ShowCloseButton = true;
         FilterParameters.DialogParameters.ContentTemplate = FilterTemplate(this);
@@ -166,18 +167,18 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public virtual void OnDeletePredefinedFilter()
     {
         _dynamicDialog.Choice(
-            RecroDict.GetRgfUiString("Delete"),
-            RecroDict.GetRgfUiString("DelConfirm"),
+            _recroDict.GetRgfUiString("Delete"),
+            _recroDict.GetRgfUiString("DelConfirm"),
             new List<ButtonParameters>()
             {
-                new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
+                new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => {
                     if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
                     {
                         PredefinedFilterName = string.Empty;
                         StateHasChanged();
                     }
                 }),
-                new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
+                new ButtonParameters(_recroDict.GetRgfUiString("No"), isPrimary:true)
             },
             DialogType.Warning);
     }
