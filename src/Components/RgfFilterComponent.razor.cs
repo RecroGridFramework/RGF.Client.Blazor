@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -21,6 +22,8 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public RgfPredefinedFilter PredefinedFilter { get; private set; } = new();
 
     public string PredefinedFilterName { get; set; } = string.Empty;
+
+    public bool IsPredefinedFilterAdmin => Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.PredefFilterAdmin);
 
     public RgfFilterProperty[] RgfFilterProperties => FilterHandler.RgfFilterProperties;
 
