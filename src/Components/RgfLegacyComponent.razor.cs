@@ -36,7 +36,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
-        if (_entityName != EntityParameters.EntityName)
+        if (_recroSec.IsAdmin && _entityName != EntityParameters.EntityName)
         {
             _entityName = EntityParameters.EntityName;
             await _jsRuntime.InvokeVoidAsync("eval", $"$('#{_containerId}').html('');");
@@ -70,7 +70,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
             }
 
             var api = _serviceProvider.GetRequiredService<IRgfApiService>();
-            var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences/legacy", authClient: false);
+            var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences/-legacy-blazor-", authClient: false);
             if (res.Success)
             {
                 SriptReferences = res.Result.Where(e => !RgfBlazorConfigurationExtension.SriptReferences.Contains(e)).ToArray();

@@ -12,11 +12,12 @@ public partial class RgfGridColumnComponent : ComponentBase
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = null!;
 
+    [Inject]
+    private IRecroSecService _recroSec { get; set; } = null!;
+
     private ElementReference _elementRef;
 
     private RgfEntity EntityDesc => GridColumnParameters.BaseGridComponent.Manager.EntityDesc;
-
-    private IRecroSecService RecroSec => GridColumnParameters.BaseGridComponent.Manager.RecroSec;
 
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 
@@ -36,7 +37,7 @@ public partial class RgfGridColumnComponent : ComponentBase
         }
         else if (objData is DateTime && PropDesc.ListType == PropertyListType.Date)
         {
-            CultureInfo culture = RecroSec.UserCultureInfo();
+            CultureInfo culture = _recroSec.UserCultureInfo();
             if (PropDesc.FormType == PropertyFormType.DateTime)
             {
                 Data = string.Format("{0} {1}",

@@ -15,7 +15,10 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 public partial class RgfToolbarComponent : ComponentBase, IDisposable
 {
     [Inject]
-    private ILogger<RgfToolbarComponent> _logger { get; set; } = default!;
+    private ILogger<RgfToolbarComponent> _logger { get; set; } = null!;
+
+    [Inject]
+    private IRecroSecService _recroSec { get; set; } = null!;
 
     public List<IDisposable> Disposables { get; private set; } = new();
 
@@ -65,7 +68,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             new(RgfMenuType.Function, RecroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings),
             new(RgfMenuType.Function, RecroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings)
         };
-        if (Manager.RecroSec.IsAuthenticated && !Manager.RecroSec.IsAdmin)
+        if (_recroSec.IsAuthenticated && !_recroSec.IsAdmin)
         {
             menu.Add(new(RgfMenuType.Function, RecroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
         }
@@ -92,7 +95,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             export.NestedMenu.Add(new RgfMenu(RgfMenuType.Function, "Comma-separated values (CSV)", Menu.ExportCsv));
             menu.Add(export);
         }
-        if (Manager.RecroSec.IsAdmin)
+        if (_recroSec.IsAdmin)
         {
             var adminMenu = new List<RgfMenu>();
             menu.Add(new(RgfMenuType.Menu, "Admin") { NestedMenu = adminMenu });
