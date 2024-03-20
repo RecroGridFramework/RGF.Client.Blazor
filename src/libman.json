@@ -8,6 +8,14 @@
       "files": [
         "jquery.min.js"
       ]
+    },
+    {
+      "library": "jqueryui@1.13.2",
+      "destination": "wwwroot/lib/jqueryui/",
+      "files": [
+        "jquery-ui.min.js",
+        "themes/base/**"
+      ]
     }
   ]
 }

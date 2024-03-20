@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -12,17 +13,20 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 public partial class RgfFilterComponent : ComponentBase, IDisposable
 {
     [Inject]
-    private  ILogger<RgfFilterComponent> _logger { get; set; } = null!;
+    private ILogger<RgfFilterComponent> _logger { get; set; } = null!;
+
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
 
     public RgfFilterParameters FilterParameters { get; private set; } = default!;
-
-    public List<IDisposable> Disposables { get; private set; } = new();
 
     public RgfFilter.Condition? Condition { get; private set; }
 
     public RgfPredefinedFilter PredefinedFilter { get; private set; } = new();
 
     public string PredefinedFilterName { get; set; } = string.Empty;
+
+    public bool IsPredefinedFilterAdmin => Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.PredefFilterAdmin);
 
     public RgfFilterProperty[] RgfFilterProperties => FilterHandler.RgfFilterProperties;
 
@@ -38,8 +42,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     private IRgManager Manager => EntityParameters.Manager!;
 
-    private IRecroDictService RecroDict => Manager.RecroDict;
-
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
     private bool _showComponent { get; set; } = false;
@@ -52,10 +54,10 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync));
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter, true);
 
         FilterParameters = EntityParameters.FilterParameters;
-        FilterParameters.DialogParameters.Title = RecroDict.GetRgfUiString("Filter");
+        FilterParameters.DialogParameters.Title = _recroDict.GetRgfUiString("Filter");
         FilterParameters.DialogParameters.UniqueName = "filter-" + Manager.EntityDesc.NameVersion.ToLower();
         FilterParameters.DialogParameters.ShowCloseButton = true;
         FilterParameters.DialogParameters.ContentTemplate = FilterTemplate(this);
@@ -63,16 +65,14 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         FilterParameters.DialogParameters.Resizable = FilterParameters.DialogParameters.Resizable ?? true;
     }
 
-    protected virtual async Task OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    protected virtual async Task OnShowFilter(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        if (args.Args.Command == ToolbarAction.ShowFilter)
-        {
-            _logger.LogDebug("RgfFilter.ShowFilter");
-            FilterHandler = await Manager.GetFilterHandlerAsync();
-            Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
-            IsFilterActive = Manager.IsFiltered || !FilterHandler.Conditions.Any();
-            Open();
-        }
+        _logger.LogDebug("RgfFilter.ShowFilter");
+        FilterHandler = await Manager.GetFilterHandlerAsync();
+        Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
+        IsFilterActive = Manager.IsFiltered || !FilterHandler.Conditions.Any();
+        Open();
+        args.Handled = true;
     }
 
     private void Open()
@@ -87,6 +87,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
             _filterDialog = RgfDynamicDialog.Create(FilterParameters.DialogParameters, _logger);
         }
         _showComponent = true;
+        StateHasChanged();
     }
 
     public void OnClose(MouseEventArgs? args)
@@ -166,28 +167,24 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public virtual void OnDeletePredefinedFilter()
     {
         _dynamicDialog.Choice(
-            RecroDict.GetRgfUiString("Delete"),
-            RecroDict.GetRgfUiString("DelConfirm"),
+            _recroDict.GetRgfUiString("Delete"),
+            _recroDict.GetRgfUiString("DelConfirm"),
             new List<ButtonParameters>()
             {
-                new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
+                new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => {
                     if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
                     {
                         PredefinedFilterName = string.Empty;
                         StateHasChanged();
                     }
                 }),
-                new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
+                new ButtonParameters(_recroDict.GetRgfUiString("No"), isPrimary:true)
             },
             DialogType.Warning);
     }
 
     public void Dispose()
     {
-        if (Disposables != null)
-        {
-            Disposables.ForEach(disposable => disposable.Dispose());
-            Disposables = null!;
-        }
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter);
     }
 }

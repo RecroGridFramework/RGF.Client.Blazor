@@ -12,7 +12,7 @@
     <Company>Recrovit Kft.</Company>
     <Product>RecroGrid Framework</Product>
     <Copyright>© Recrovit Kft. All rights reserved.</Copyright>
-    <Version>8.3.0</Version>
+    <Version>8.4.0</Version>
     <FileVersion>$(Version).1$([System.DateTime]::Now.ToString(MMdd))</FileVersion>
     <InformationalVersion>$(FileVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -22,7 +22,7 @@
     <Authors>$(Company)</Authors>
     <PackageOutputPath>..\..\dist</PackageOutputPath>
     <PackageProjectUrl>https://recrogrid.com/</PackageProjectUrl>
-    <Description>$(Title)</Description>
+    <Description>RecroGrid Framework Blazor UI Abstraction</Description>
     <PackageTags>RecroGrid Framework Client Blazor</PackageTags>
     <RepositoryUrl>https://github.com/RecroGridFramework/RGF.Client.Blazor.git</RepositoryUrl>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
@@ -38,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Release'">
-    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.3.0" />
+    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.4.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Debug'">
@@ -48,10 +48,15 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\README.*" Pack="true" PackagePath="\" />
+    <Content Remove="bundleconfig.json" />
     <Content Remove="libman.json" />
-    <None Include="libman.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
+    <None Include="bundleconfig.json" />
+    <None Include="libman.json" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)'=='Release'">
+    <Content Update="wwwroot\scripts\recrovit-rgf-blazor.js" CopyToPublishDirectory="Never"/>
+    <Content Update="wwwroot\scripts\recrovit-rgf-blazor-legacy.js" CopyToPublishDirectory="Never"/>
   </ItemGroup>
 
 </Project>

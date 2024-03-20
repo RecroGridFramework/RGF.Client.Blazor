@@ -12,11 +12,12 @@ public partial class RgfGridColumnComponent : ComponentBase
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = null!;
 
+    [Inject]
+    private IRecroSecService _recroSec { get; set; } = null!;
+
     private ElementReference _elementRef;
 
     private RgfEntity EntityDesc => GridColumnParameters.BaseGridComponent.Manager.EntityDesc;
-
-    private IRecroSecService RecroSec => GridColumnParameters.BaseGridComponent.Manager.RecroSec;
 
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 
@@ -36,7 +37,7 @@ public partial class RgfGridColumnComponent : ComponentBase
         }
         else if (objData is DateTime && PropDesc.ListType == PropertyListType.Date)
         {
-            CultureInfo culture = RecroSec.UserCultureInfo();
+            CultureInfo culture = _recroSec.UserCultureInfo();
             if (PropDesc.FormType == PropertyFormType.DateTime)
             {
                 Data = string.Format("{0} {1}",
@@ -94,23 +95,33 @@ public partial class RgfGridColumnComponent : ComponentBase
     #region Row/Cell Style
     public static async Task InitStylesAsync(IJSRuntime jsRuntime, RgfEntity entityDesc, RgfDynamicDictionary rowData, IEnumerable<RgfProperty> prop4RowStyles, IEnumerable<RgfProperty> prop4ColStyles)
     {
-        var attributes = rowData.GetMember("__attributes") as RgfDynamicDictionary;
-        if (attributes == null)
-        {
-            attributes = new RgfDynamicDictionary();
-            rowData["__attributes"] = attributes;
-        }
+        var attributes = rowData.GetOrNew<RgfDynamicDictionary>("__attributes");
         var list = await GetRowClassAsync(jsRuntime, entityDesc, rowData, prop4RowStyles);
-        attributes["class"] = list.Any() ? string.Join(" ", list) : null;
+        addAttributes(attributes, null, list, "class", ' ');
+
         list = await GetRowStyleAsync(jsRuntime, entityDesc, rowData, prop4RowStyles);
-        attributes["style"] = list.Any() ? string.Join(";", list) : null;
+        addAttributes(attributes, null, list, "style", ';');
 
         foreach (var prop in prop4ColStyles)
         {
             list = await GetCellClassAsync(jsRuntime, entityDesc, prop, rowData);
-            attributes[$"class-{prop.Alias}"] = list.Any() ? string.Join(" ", list) : null;
+            addAttributes(attributes, prop.Alias, list, "class", ' ');
+
             list = await GetCellStyleAsync(jsRuntime, entityDesc, prop, rowData);
-            attributes[$"style-{prop.Alias}"] = list.Any() ? string.Join(";", list) : null;
+            addAttributes(attributes, prop.Alias, list, "style", ';');
+        }
+
+        static void addAttributes(RgfDynamicDictionary attributes, string? alias, List<string> list, string key, char separator)
+        {
+            if (list.Count != 0)
+            {
+                if (!string.IsNullOrEmpty(alias))
+                {
+                    attributes = attributes.GetOrNew<RgfDynamicDictionary>(alias);
+                }
+                var val = string.Join(separator, list);
+                attributes.Set<string>(key, (old) => string.IsNullOrEmpty(old) ? val : $"{old.Trim(separator)}{separator}{val}");
+            }
         }
     }
 

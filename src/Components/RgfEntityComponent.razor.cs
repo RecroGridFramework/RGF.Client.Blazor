@@ -2,12 +2,13 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
-using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using Recrovit.RecroGridFramework.Client.Models;
 using Recrovit.RecroGridFramework.Client.Services;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -41,13 +42,16 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = default!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
     public IRgManager? Manager { get; set; }
 
     private bool _initialized = false;
 
-    private RgfEntityKey? FormDataKey { get; set; }
+    private bool _showFormView { get; set; }
 
     private string? EntityName { get; set; }
 
@@ -84,16 +88,20 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             EntityName = this.EntityParameters.EntityName,
             Skeleton = true,
             SelectParam = EntityParameters.SelectParam,
-            EntityKey = EntityParameters.FormParameters?.EntityKey,
+            EntityKey = EntityParameters.FormParameters?.FormViewKey.EntityKey,
             ListParam = EntityParameters.ListParam,
             CustomParams = EntityParameters.CustomParams
         };
 
         Manager = new RgManager(param, _serviceProvider);
         Manager.RefreshEntity += Refresh;
-        Manager.FormDataKey.OnAfterChange(this, OnChangeFormDataKey);
+        Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
-        Manager.NotificationManager.Subscribe<RgfToolbarEventArgs>(this, OnToolbarCommanAsync);
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.EntityEditor, OnEntityEditorAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
+            [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
+            Manager.OnToolbarCommandAsync, true);
+
         if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
@@ -147,45 +155,49 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
     }
 
-    protected virtual void OnChangeFormDataKey(ObservablePropertyEventArgs<RgfEntityKey?> args)
+    protected virtual void OnChangeFormViewKey(ObservablePropertyEventArgs<FormViewKey?> args)
     {
-        FormDataKey = args.NewData;
-        EntityParameters.FormParameters!.EntityKey = FormDataKey ?? new();
-        if (EntityParameters.FormOnly && FormDataKey == null)
+        _showFormView = args.NewData != null;
+        EntityParameters.FormParameters.FormViewKey = args.NewData ?? new();
+        if (EntityParameters.FormOnly && !_showFormView)
         {
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager!);
             _ = EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
     }
 
-    private void OnToolbarCommanAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    private Task OnEntityEditorAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
-        if (args.Args.Command == ToolbarAction.EntityEditor)
+        var param = new RgfEntityParameters("RecroGrid_Entity")
         {
-            var param = new RgfEntityParameters("RecroGrid_Entity")
+            FormOnly = true,
+            ListParam = new()
             {
-                FormOnly = true,
-                ListParam = new()
-                {
-                    FixFilter = new RgfFilter.Condition[] {
+                FixFilter = new RgfFilter.Condition[] {
                         new() { LogicalOperator = RgfFilter.LogicalOperator.And, PropertyId = 2, QueryOperator = RgfFilter.QueryOperator.Equal, IntValue1 = Manager?.EntityDesc.EntityId }
                     }
-                }
-            };
-            param.EventDispatcher.Subscribe(RgfEntityEventKind.Destroy, (arg) =>
-            {
-                _entityEditor = null;
-                StateHasChanged();
-            });
-            _entityEditor = RgfEntityComponent.Create(param);
-        }
+            }
+        };
+        param.EventDispatcher.Subscribe(RgfEntityEventKind.Destroy, (arg) =>
+        {
+            _entityEditor = null;
+            StateHasChanged();
+        });
+        _entityEditor = RgfEntityComponent.Create(param);
+        args.Handled = true;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     public void Dispose()
     {
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.EntityEditor, OnEntityEditorAsync);
         if (Manager != null)
         {
             _logger.LogDebug("Manager.Dispose: {EntityName}", this.EntityName);
+            EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(
+                [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
+                Manager.OnToolbarCommandAsync);
             Manager.Dispose();
             Manager = null;
         }

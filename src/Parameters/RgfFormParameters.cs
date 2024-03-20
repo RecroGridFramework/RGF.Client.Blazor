@@ -1,15 +1,14 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
-using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Components;
-using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Events;
+using Recrovit.RecroGridFramework.Client.Models;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfFormParameters
 {
-    public RgfEntityKey EntityKey { get; set; } = default!;
+    public FormViewKey FormViewKey { get; internal set; } = new();
 
     public string? ErrorCssClass { get; set; }
 

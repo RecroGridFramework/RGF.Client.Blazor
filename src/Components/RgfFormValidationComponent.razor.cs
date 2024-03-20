@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Models;
-using Recrovit.RecroGridFramework.Client.Blazor.Events;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
@@ -12,6 +12,9 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfFormValidationComponent : ComponentBase
 {
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
     public bool HasErrors { get; set; }
 
     public bool IsValid => !CurrentEditContext.GetValidationMessages().Any();
@@ -67,7 +70,7 @@ public partial class RgfFormValidationComponent : ComponentBase
             return;
         }
         BaseFormComponent._logger.LogDebug("OnValidationRequested: {FieldName}", fieldIdentifier.FieldName);
-        var eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent);
+        RgfFormEventArgs eventArgs;
         if (string.IsNullOrEmpty(fieldIdentifier.FieldName))
         {
             _messageStore.Clear();
@@ -77,18 +80,18 @@ public partial class RgfFormValidationComponent : ComponentBase
                 var fid = new FieldIdentifier(BaseFormComponent.FormData.DataRec, property.Alias);
                 RequiredValidator(fid, property);
             }
+            eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent);
         }
         else
         {
-            eventArgs.FieldId = fieldIdentifier;
             var alias = fieldIdentifier.FieldName;
             var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties).Where(e => e.Alias.Equals(alias))).SingleOrDefault();
             if (property != null)
             {
-                eventArgs.Property = property;
                 _messageStore.Clear(fieldIdentifier);
                 RequiredValidator(fieldIdentifier, property);
             }
+            eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent, fieldIdentifier, property);
         }
         _ = BaseFormComponent.FormParameters.EventDispatcher
             .DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs))
@@ -111,7 +114,7 @@ public partial class RgfFormValidationComponent : ComponentBase
                     var data = BaseFormComponent.FormData.DataRec.GetItemData(property.Alias);
                     if (string.IsNullOrEmpty(data.ToString()))
                     {
-                        var message = Manager.RecroDict.GetRgfUiString("FieldIsRequired");
+                        var message = _recroDict.GetRgfUiString("FieldIsRequired");
                         AddFieldError(fieldIdentifier, string.Format(message, property.Label), false);
                     }
                 }
