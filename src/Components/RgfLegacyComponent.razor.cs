@@ -85,7 +85,13 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
                 //await _jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddScriptLinkAsync", ApiService.BaseAddress + item, null, "rgf-legacy");
                 await _jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
             }
-            await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/recrovit-rgf-legacy.js");
+            await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
+#if DEBUG
+                "recrovit-rgf-blazor-legacy.js"
+#else
+                "recrovit-rgf-blazor-legacy.min.js"
+#endif
+                );
         }
         await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jqueryui/themes/base/jquery-ui.min.css", false, null, null, "rgf-legacy");
         foreach (var item in StylesheetsReferences)

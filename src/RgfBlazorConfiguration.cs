@@ -100,7 +100,13 @@ public static class RgfBlazorConfigurationExtension
             await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
         }
-        await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/recrovit-rgf-blazor.js");
+        await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
+#if DEBUG
+            "recrovit-rgf-blazor.js"
+#else
+            "recrovit-rgf-blazor.min.js"
+#endif
+            );
     }
 
     internal static string[] SriptReferences { get; set; } = [];
