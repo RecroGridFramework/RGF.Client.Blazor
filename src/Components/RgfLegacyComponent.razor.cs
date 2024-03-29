@@ -36,7 +36,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
-        if (_recroSec.IsAdmin && _entityName != EntityParameters.EntityName)
+        if (_entityName != EntityParameters.EntityName)
         {
             _entityName = EntityParameters.EntityName;
             await _jsRuntime.InvokeVoidAsync("eval", $"$('#{_containerId}').html('');");
@@ -48,7 +48,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
             }
             else if (EntityParameters.EntityName.Equals("RgfMenu", StringComparison.OrdinalIgnoreCase))
             {
-                object[][] filter = [[RgfFilter.LogicalOperator.And.ToString().ToLower(), RgfFilter.QueryOperator.Equal, "rg-col-953", 10]];
+                object[][] filter = [[RgfFilter.LogicalOperator.And.ToString().ToLower(), RgfFilter.QueryOperator.Equal, "rg-col-951", 10]];
                 await _jsRuntime.InvokeVoidAsync($"{JsRgfLegacyNamespace}.CreateRecroGridAsync", "RGF_Menu_1", _containerId, _selfRef, filter);
             }
             else
