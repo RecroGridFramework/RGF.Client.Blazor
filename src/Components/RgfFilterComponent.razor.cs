@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
@@ -37,6 +38,8 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public bool ChangeProperty(RgfFilter.Condition condition, int newPropertyId) => FilterHandler.ChangeProperty(condition, newPropertyId);
     public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) => FilterHandler.ChangeQueryOperator(condition, newOperator);
 
+
+    private EditContext _emptyEditContext = new(new object());
 
     public bool IsFilterActive { get; set; } = true;
 
