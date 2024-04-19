@@ -1,6 +1,10 @@
-﻿@if (_showComponent)
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+@if (_showComponent)
 {
-    @_filterDialog
+    <EditForm EditContext="@_emptyEditContext">
+        @_filterDialog
+    </EditForm>
 }
 
 <RgfDynamicDialog @ref="_dynamicDialog" />
