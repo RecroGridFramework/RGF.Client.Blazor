@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.UI;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -10,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
-public partial class RgfFormValidationComponent : ComponentBase
+public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidationMessages
 {
     [Inject]
     private IRecroDictService _recroDict { get; set; } = null!;
@@ -37,13 +38,14 @@ public partial class RgfFormValidationComponent : ComponentBase
         _messageStore = new(CurrentEditContext);
 
         CurrentEditContext.OnValidationStateChanged += (source, arg) => { HasErrors = CurrentEditContext.GetValidationMessages().Any(); StateHasChanged(); };
-        CurrentEditContext.OnValidationRequested += (source, arg) => OnValidationRequested();
-        CurrentEditContext.OnFieldChanged += (source, arg) => OnFieldChanged(arg.FieldIdentifier);
+        CurrentEditContext.OnValidationRequested += (source, arg) => _ = ValidationRequestedAsync();
+        CurrentEditContext.OnFieldChanged += OnFieldChanged;
         CurrentEditContext.SetFieldCssClassProvider(new RgfFieldCssClassProvider(BaseFormComponent));
     }
 
-    private void OnFieldChanged(in FieldIdentifier fieldIdentifier)
+    private void OnFieldChanged(object? source, FieldChangedEventArgs arg)
     {
+        FieldIdentifier fieldIdentifier = arg.FieldIdentifier;
         if (fieldIdentifier.Model is RgfDynamicData dynamicData)
         {
             CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
@@ -59,17 +61,17 @@ public partial class RgfFormValidationComponent : ComponentBase
                 CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
                 BaseFormComponent._logger.LogDebug("MarkAsUnmodified: {FieldName}", fieldIdentifier.FieldName);
             }
-            OnValidationRequested(fieldIdentifier);
+            _ = ValidationRequestedAsync(fieldIdentifier);
         }
     }
 
-    private void OnValidationRequested(in FieldIdentifier fieldIdentifier = default)
+    internal async Task ValidationRequestedAsync(FieldIdentifier fieldIdentifier = default)
     {
         if (fieldIdentifier.Model is RgfDynamicData dynamicData)
         {
             return;
         }
-        BaseFormComponent._logger.LogDebug("OnValidationRequested: {FieldName}", fieldIdentifier.FieldName);
+        BaseFormComponent._logger.LogDebug("ValidationRequested: {FieldName}", fieldIdentifier.FieldName);
         RgfFormEventArgs eventArgs;
         if (string.IsNullOrEmpty(fieldIdentifier.FieldName))
         {
@@ -79,6 +81,8 @@ public partial class RgfFormValidationComponent : ComponentBase
             {
                 var fid = new FieldIdentifier(BaseFormComponent.FormData.DataRec, property.Alias);
                 RequiredValidator(fid, property);
+                eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent, fid, property);
+                await BaseFormComponent.FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
             }
             eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent);
         }
@@ -93,9 +97,8 @@ public partial class RgfFormValidationComponent : ComponentBase
             }
             eventArgs = new RgfFormEventArgs(RgfFormEventKind.ValidationRequested, BaseFormComponent, fieldIdentifier, property);
         }
-        _ = BaseFormComponent.FormParameters.EventDispatcher
-            .DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs))
-            .ContinueWith(t => CurrentEditContext.NotifyValidationStateChanged());
+        await BaseFormComponent.FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
+        CurrentEditContext.NotifyValidationStateChanged();
     }
 
     private void RequiredValidator(FieldIdentifier fieldIdentifier, RgfForm.Property property)
@@ -134,23 +137,37 @@ public partial class RgfFormValidationComponent : ComponentBase
         AddFieldError(fieldIdentifier, message, notifyValidationStateChanged);
     }
 
-    public void AddFieldError(string alias, string message, bool notifyValidationStateChanged = true) => AddFieldError(new FieldIdentifier(BaseFormComponent.FormData.DataRec, alias), message, notifyValidationStateChanged);
+    public void AddFieldErrorMessage(string alias, string message, bool checkDuplicates = true) => AddFieldError(alias, message, true, checkDuplicates);
 
-    public void AddFieldError(in FieldIdentifier fieldIdentifier, string message, bool notifyValidationStateChanged = true)
+    public void AddFormErrorMessage(string message, bool checkDuplicates = true) => AddFormError(message, true, checkDuplicates);
+
+    public void AddFieldError(string alias, string message, bool notifyValidationStateChanged = true, bool checkDuplicates = true) => AddFieldError(new FieldIdentifier(BaseFormComponent.FormData.DataRec, alias), message, notifyValidationStateChanged, checkDuplicates);
+
+    public void AddFieldError(in FieldIdentifier fieldIdentifier, string message, bool notifyValidationStateChanged = true, bool checkDuplicates = true)
     {
-        _messageStore.Add(fieldIdentifier, message);
-        if (notifyValidationStateChanged)
+        if (!checkDuplicates || !_messageStore[fieldIdentifier].Contains(message))
         {
-            CurrentEditContext.NotifyValidationStateChanged();
+            _messageStore.Add(fieldIdentifier, message);
+            if (notifyValidationStateChanged)
+            {
+                CurrentEditContext.NotifyValidationStateChanged();
+            }
         }
     }
 
-    public void AddGlobalError(string message, bool notifyValidationStateChanged = true)
+    [Obsolete("Use instead AddFormError", true)]
+    public void AddGlobalError(string message, bool notifyValidationStateChanged = true) { }
+
+    public void AddFormError(string message, bool notifyValidationStateChanged = true, bool checkDuplicates = true)
     {
-        _messageStore.Add(new FieldIdentifier(BaseFormComponent.FormData.DataRec, string.Empty), message);
-        if (notifyValidationStateChanged)
+        var fieldIdentifier = new FieldIdentifier(BaseFormComponent.FormData.DataRec, string.Empty);
+        if (!checkDuplicates || !_messageStore[fieldIdentifier].Contains(message))
         {
-            CurrentEditContext.NotifyValidationStateChanged();
+            _messageStore.Add(fieldIdentifier, message);
+            if (notifyValidationStateChanged)
+            {
+                CurrentEditContext.NotifyValidationStateChanged();
+            }
         }
     }
 
