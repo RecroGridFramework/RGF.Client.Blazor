@@ -88,6 +88,7 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
         }
         else
         {
+            _messageStore.Clear(new FieldIdentifier(BaseFormComponent.FormData.DataRec, string.Empty));
             var alias = fieldIdentifier.FieldName;
             var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties).Where(e => e.Alias.Equals(alias))).SingleOrDefault();
             if (property != null)
