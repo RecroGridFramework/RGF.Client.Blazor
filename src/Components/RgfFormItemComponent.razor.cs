@@ -68,6 +68,7 @@ public partial class RgfFormItemComponent : ComponentBase
                     builder.CloseElement();
                 }
             };
+            StateHasChanged();//This is needed due to asynchronous validation
         }
         return validationMessage;
     }

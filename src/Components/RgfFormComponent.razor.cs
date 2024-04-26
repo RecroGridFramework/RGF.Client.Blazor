@@ -322,11 +322,21 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         return false;
     }
 
-    public virtual bool Validate() => CurrentEditContext.Validate();
+    public virtual async Task<bool> ValidateAsync()
+    {
+        if (FormValidation != null)
+        {
+            await FormValidation.ValidationRequestedAsync();
+            return !CurrentEditContext.GetValidationMessages().Any();
+        }
+
+        return CurrentEditContext.Validate();
+    }
 
     public virtual async Task<bool> BeginSaveAsync(bool close)
     {
-        if (Validate())
+        bool valid = await ValidateAsync();
+        if (valid)
         {
             var res = await SaveAsync(!close);
             if (res.Success)
@@ -342,7 +352,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             {
                 foreach (var item in res.Messages.Error)
                 {
-                    if (item.Key.Equals(RgfMessages.MessageDialog))
+                    if (item.Key.Equals(RgfCoreMessages.MessageDialog))
                     {
                         _dynamicDialog.Alert(_recroDict.GetRgfUiString("Error"), item.Value);
                     }
@@ -355,7 +365,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                         }
                         else
                         {
-                            FormValidation?.AddGlobalError(item.Value);
+                            FormValidation?.AddFormError(item.Value);
                         }
                     }
                 }
