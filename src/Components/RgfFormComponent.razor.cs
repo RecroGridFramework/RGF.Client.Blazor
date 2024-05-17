@@ -73,27 +73,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width ?? "80%";
         FormParameters.DialogParameters.Resizable = FormParameters.DialogParameters.Resizable ?? true;
         FormParameters.DialogParameters.NoHeader = FormParameters.DialogParameters.HeaderTemplate == null;
-
-        if (FooterTemplate != null)
-        {
-            FormParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
-        }
-        else
-        {
-            var basePermissions = Manager.ListHandler.CRUD;
-            List<ButtonParameters> buttons = new();
-            bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
-            if (edit)
-            {
-                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)));
-            }
-            buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
-            if (edit)
-            {
-                buttons.Add(new("OK", (arg) => BeginSaveAsync(true), true));
-            }
-            FormParameters.DialogParameters.PredefinedButtons = buttons;
-        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -133,6 +112,12 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     {
         if (rowIndex >= 0)
         {
+            var basePermissions = Manager.ListHandler.CRUD;
+            if (ignoreChanges == false &&
+                (basePermissions.Create == false && FormEditMode == FormEditMode.Create || basePermissions.Update == false && FormEditMode == FormEditMode.Update))
+            {
+                ignoreChanges = true;
+            }
             if (ignoreChanges || !CurrentEditContext.IsModified())
             {
                 if (_setFormItemActive == false)
@@ -179,6 +164,27 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public async Task<bool> ParametersSetAsync(RgfEntityKey entityKey)
     {
         FormEditMode = entityKey.IsEmpty ? FormEditMode.Create : FormEditMode.Update;
+        if (FooterTemplate != null)
+        {
+            FormParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
+        }
+        else
+        {
+            var basePermissions = Manager.ListHandler.CRUD;
+            List<ButtonParameters> buttons = new();
+            bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
+            if (edit)
+            {
+                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)));
+            }
+            buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
+            if (edit)
+            {
+                buttons.Add(new("OK", (arg) => BeginSaveAsync(true), true));
+            }
+            FormParameters.DialogParameters.PredefinedButtons = buttons;
+        }
+
         FormHandler = Manager.CreateFormHandler();
         var res = await FormHandler.InitializeAsync(entityKey);
         if (res.Success)
@@ -247,7 +253,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual bool OnClose()
     {
-        if (CurrentEditContext.IsModified())
+        var basePermissions = Manager.ListHandler.CRUD;
+        var ignoreChanges = basePermissions.Create == false && FormEditMode == FormEditMode.Create || basePermissions.Update == false && FormEditMode == FormEditMode.Update;
+        if (ignoreChanges == false && CurrentEditContext.IsModified())
         {
             _dynamicDialog.Choice(
                 _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
