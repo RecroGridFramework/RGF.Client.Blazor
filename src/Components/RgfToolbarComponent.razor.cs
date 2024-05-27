@@ -179,7 +179,23 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
         if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
-            await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
+            var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
+            if (result == null || !result.Success && result.Messages?.Error?.Any() != true)
+            {
+                await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
+            }
+            else
+            {
+                Manager.BroadcastMessages(result.Messages, this);
+                if (result.Result.RefreshGrid)
+                {
+                    await Manager.ListHandler.RefreshDataAsync();
+                }
+                else if (result.Result.RefreshRow && result.Result.Row != null)
+                {
+                    await Manager.ListHandler.RefreshRowAsync(result.Result.Row);
+                }
+            }
         }
     }
 
