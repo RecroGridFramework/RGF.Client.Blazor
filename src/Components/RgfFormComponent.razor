@@ -39,17 +39,19 @@
     public RenderFragment<RgfFormGroupLayoutParameters> DefaultFormGroupLayoutTemplate => (param) =>
     @<div class="rg-form-grid-container">
         @foreach (var prop in param.FormGroup.Properties)
-        {
-            @param.BaseFormComponent.GetFormItemLayoutTemplate(new RgfFormItemParameters(this, param.FormGroup, prop))
-        }
+    {
+        @param.BaseFormComponent.GetFormItemLayoutTemplate(new RgfFormItemParameters(this, param.FormGroup, prop))
+    }
     </div>;
 
     public RenderFragment<RgfFormItemParameters> DefaultFormItemLayoutTemplate => (param) =>
-    @<div name="@param.Property.ClientName" class="rg-form-grid-col" style="@($"grid-column-end: span {param.Property.FlexColumnWidth ?? param.Group.FlexColumnWidth};")">
+    @<div name="@param.Property.ClientName"
+              class="@($"{(param.Property.EmbededGrid ? "rg-collection" : "rg-property")} rg-form-grid-col")"
+              style="@($"grid-column-end: span {param.Property.FlexColumnWidth ?? param.Group.FlexColumnWidth};")">
         @if (!string.IsNullOrEmpty(param.Property.PreElement))
-        {
-            @((MarkupString)param.Property.PreElement)
-        }
+    {
+        @((MarkupString)param.Property.PreElement)
+    }
         @param.BaseFormComponent.GetFormItemTemplate(param)
     </div>;
 }
