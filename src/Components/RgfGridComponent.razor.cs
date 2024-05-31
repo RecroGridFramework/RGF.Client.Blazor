@@ -48,6 +48,15 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        var eventArg = new RgfEventArgs<RgfListEventArgs>(this, RgfListEventArgs.CreateAfterRenderEvent(this, firstRender));
+        await GridParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
+        _logger.LogDebug("OnAfterRender");
+    }
+
     protected async Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
     {
         switch (arg.Args.Command)

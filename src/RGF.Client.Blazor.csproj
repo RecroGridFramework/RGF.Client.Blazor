@@ -38,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Release'">
-    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.5.2" />
+    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.6.0" />
     <Content Update="wwwroot\scripts\recrovit-rgf-blazor.js" CopyToPublishDirectory="Never" />
     <Content Update="wwwroot\scripts\recrovit-rgf-blazor-legacy.js" CopyToPublishDirectory="Never" />
   </ItemGroup>
