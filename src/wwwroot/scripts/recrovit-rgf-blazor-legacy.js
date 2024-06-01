@@ -1,5 +1,5 @@
 ﻿/*!
-* recrovit-rgf-legacy.js v1.0.1
+* recrovit-rgf-legacy.js v1.0.2
 */
 
 window.Recrovit = window.Recrovit || {};
@@ -13,8 +13,8 @@ Blazor.Legacy = {
             Data: { Name: entityName },
             Filter: filter
         };
-        await Recrovit.WebCli.RecroGrid.CreateRecroGridAsync(rgServiceParams, `#${containerId}`, null, null, dotNetRef);
         BlazorLegacy.ChkVersion(entityName, containerId);
+        await Recrovit.WebCli.RecroGrid.CreateRecroGridAsync(rgServiceParams, `#${containerId}`, null, null, dotNetRef);
     },
     CreateRecroSecAsync: async function (containerId, dotNetRef) {
         var names = ['RS_ObjectPermission', 'RS_PermissionGroup', 'RS_RoleRolePriority', 'RS_vRecroSec_User', 'RS_PermissionType'];
@@ -23,8 +23,8 @@ Blazor.Legacy = {
         }
     },
     ChkVersion: function (entityName, containerId) {
-        if (entityName.includes("RecroGrid_Entity")) {
-            $("#" + containerId).before('<div class="recrogrid-version alert alert-info" role="alert"></div>');
+        if (entityName.includes("RecroGrid_Entity") && $('div.recrogrid-version.alert').length == 0) {
+            $("#" + containerId).append('<div class="recrogrid-version alert alert-info" role="alert"></div>');
             Recrovit.WebCli.RecroGrid.VersionInfo('div.recrogrid-version');
         }
     }

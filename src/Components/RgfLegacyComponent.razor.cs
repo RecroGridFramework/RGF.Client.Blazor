@@ -106,7 +106,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
     }
 
     [JSInvokable]
-    public async Task<string?> GetAuthorizationHeaderAsync()
+    public async Task<string> GetAuthorizationHeaderAsync()
     {
         var token = await _recroSec.GetAccessTokenAsync();
         return string.IsNullOrEmpty(token) ? "" : $"Bearer {token}";
