@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -47,8 +48,6 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
-    private bool RemoveStyleSheet { get; set; }//TODO: This needs to be reconsidered => RemoveStyleSheet
-
     private RgfEntityKey? _previousEntityKey { get; set; }
 
     private bool ShowDialog { get; set; }
@@ -70,7 +69,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
         FormParameters.DialogParameters.OnClose = OnClose;
-        FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width ?? "80%";
+        FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width;// ?? "80%";
         FormParameters.DialogParameters.Resizable = FormParameters.DialogParameters.Resizable ?? true;
         FormParameters.DialogParameters.NoHeader = FormParameters.DialogParameters.HeaderTemplate == null;
     }
@@ -96,6 +95,15 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 }
             }
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, RgfFormEventArgs.CreateAfterRenderEvent(this, firstRender));
+        await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
+        _logger.LogDebug("OnAfterRender");
     }
 
     public Task FirstFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : 0);
@@ -317,9 +325,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         if (FormHandler?.InitFormData(formResult, out FormViewData? formData) == true && formData != null)
         {
             FormData = formData;
-            if (!RemoveStyleSheet && !string.IsNullOrEmpty(FormData.StyleSheetUrl))
+            if (!string.IsNullOrEmpty(FormData.StyleSheetUrl) && Manager.EntityDesc.Options.GetBoolValue("RGO_LegacyFormTemplate") != true)
             {
-                //RemoveStyleSheet = await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + _formViewData.StyleSheetUrl);
+                await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", Services.ApiService.BaseAddress + FormData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
             var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
@@ -441,10 +449,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             Disposables.ForEach(disposable => disposable.Dispose());
             Disposables = null!;
         }
-        if (RemoveStyleSheet)
+        if (!string.IsNullOrEmpty(FormData.StyleSheetUrl))
         {
             JsRuntime.InvokeVoidAsync("Recrovit.LPUtils.RemoveLinkedFile", Services.ApiService.BaseAddress + FormData.StyleSheetUrl, "stylesheet");
-            RemoveStyleSheet = false;
         }
         if (FormHandler != null)
         {

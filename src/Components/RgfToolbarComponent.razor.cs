@@ -96,12 +96,12 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             export.NestedMenu.Add(new RgfMenu(RgfMenuType.Function, "Comma-separated values (CSV)", Menu.ExportCsv));
             menu.Add(export);
         }
-        if (_recroSec.IsAdmin)
+        /*if (_recroSec.IsAdmin)
         {
             var adminMenu = new List<RgfMenu>();
             menu.Add(new(RgfMenuType.Menu, "Admin") { NestedMenu = adminMenu });
             adminMenu.Add(new(RgfMenuType.Function, "Entity Editor", Menu.EntityEditor));
-        }
+        }*/
         if ((menu.Count > 0 && menu.Last().MenuType != RgfMenuType.Divider))
         {
             menu.Add(new(RgfMenuType.Divider));
