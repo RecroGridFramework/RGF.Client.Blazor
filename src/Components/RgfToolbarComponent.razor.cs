@@ -74,6 +74,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
         }
         menu.Add(new(RgfMenuType.Divider));
+        if (RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Chart, out _))
+        {
+            menu.Add(new(RgfMenuType.Function, "RecroChart", Menu.RecroChart));
+        }
         if (Manager.EntityDesc.IsRecroTrackReadable)
         {
             menu.Add(new(RgfMenuType.Function, "RecroTrack", Menu.RecroTrack));
@@ -108,8 +112,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         menu.Add(new(RgfMenuType.Function, "About RecroGrid Framework", Menu.RgfAbout));
 
-        Type? type;
-        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Menu, out type))
+        Type? menuType;
+        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Menu, out menuType))
         {
             throw new NotImplementedException("The Menu template component is missing.");
         }
@@ -124,7 +128,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         SettingsMenu = builder =>
         {
             int sequence = 0;
-            builder.OpenComponent(sequence++, type);
+            builder.OpenComponent(sequence++, menuType);
             builder.AddAttribute(sequence++, "MenuParameters", param);
             builder.CloseComponent();
         };

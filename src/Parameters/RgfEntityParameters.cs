@@ -31,6 +31,8 @@ public class RgfEntityParameters : RgfSessionParams
 
     public RgfFormParameters FormParameters { get; set; } = new();
 
+    public RgfChartParameters ChartParameters { get; set; } = new();
+
     public RenderFragment<IRgManager>? TitleTemplate { get; set; }
 
     public bool FormOnly { get; set; }
