@@ -24,6 +24,10 @@
     {
         @FormTemplate(EntityParameters)
     }
+    @if (ChartTemplate != null)
+    {
+        @ChartTemplate(EntityParameters)
+    }
     if (_entityEditor != null)
     {
         @_entityEditor
@@ -55,6 +59,9 @@ else if (LoadingIndicator != null)
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfEntityParameters> FormTemplate { get; set; } = null!;
+
+    [Parameter]
+    public RenderFragment<RgfEntityParameters>? ChartTemplate { get; set; }
 
     [Parameter]
     public RenderFragment LoadingIndicator { get; set; } = @<p><em>Loading...</em></p>;

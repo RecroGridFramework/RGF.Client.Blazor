@@ -49,6 +49,17 @@ public partial class RgfGridColumnComponent : ComponentBase
                 Data = ((DateTime)objData).ToString("d", culture).Replace(" ", "");
             }
         }
+        else if (PropDesc.ListType == PropertyListType.Numeric && !PropDesc.IsKey &&
+                !string.IsNullOrEmpty(Data) && objData is not string &&
+                PropDesc.Options?.GetBoolValue("RGO_NoFormat") != true)
+        {
+            try
+            {
+                var number = Convert.ToDecimal(objData);
+                Data = number.ToString("#,0.##", CultureInfo.CurrentCulture);
+            }
+            catch { }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
