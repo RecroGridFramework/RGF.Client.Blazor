@@ -444,6 +444,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual void DisposeFormComponent()
     {
+        FormParameters.EventDispatcher.Unsubscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync);
         if (Disposables != null)
         {
             Disposables.ForEach(disposable => disposable.Dispose());
