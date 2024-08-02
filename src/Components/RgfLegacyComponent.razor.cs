@@ -102,6 +102,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
 
     private async Task UnloadResourcesAsync()
     {
+        await _jsRuntime.InvokeVoidAsync($"{JsRgfLegacyNamespace}.Dispose");
         await _jsRuntime.InvokeVoidAsync("eval", "$('link[data-component=\"rgf-legacy\"]').remove();");
     }
 

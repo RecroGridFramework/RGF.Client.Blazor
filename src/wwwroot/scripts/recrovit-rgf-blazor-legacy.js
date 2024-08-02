@@ -1,5 +1,5 @@
 ﻿/*!
-* recrovit-rgf-legacy.js v1.0.2
+* recrovit-rgf-legacy.js v1.1.0
 */
 
 window.Recrovit = window.Recrovit || {};
@@ -27,7 +27,10 @@ Blazor.Legacy = {
             $("#" + containerId).append('<div class="recrogrid-version alert alert-info" role="alert"></div>');
             Recrovit.WebCli.RecroGrid.VersionInfo('div.recrogrid-version');
         }
-    }
+    },
+    Dispose: function () {
+        $('.ui-dialog.recro-grid-base').remove();
+    },
 };
 
 const BlazorLegacy = Blazor.Legacy;
