@@ -184,7 +184,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             ListParam = new()
             {
                 FixFilter = new RgfFilter.Condition[] {
-                        new() { LogicalOperator = RgfFilter.LogicalOperator.And, PropertyId = 2, QueryOperator = RgfFilter.QueryOperator.Equal, IntValue1 = Manager?.EntityDesc.EntityId }
+                        new() { LogicalOperator = RgfFilter.LogicalOperator.And, PropertyId = 2, QueryOperator = RgfFilter.QueryOperator.Equal, Param1 = Manager?.EntityDesc.EntityId }
                     }
             }
         };

@@ -42,7 +42,8 @@ public partial class RgfGridColumnComponent : ComponentBase
             {
                 Data = string.Format("{0} {1}",
                     ((DateTime)objData).ToString("d", culture).Replace(" ", ""),
-                    ((DateTime)objData).ToString("HH:mm:ss", culture).Replace(" ", ""));
+                    ((DateTime)objData).ToString("T", culture).Replace(" ", ""));
+
             }
             else
             {

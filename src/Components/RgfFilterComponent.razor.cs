@@ -31,12 +31,12 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public RgfFilterProperty[] RgfFilterProperties => FilterHandler.RgfFilterProperties;
 
-    public void AddCondition(RgfFilter.Condition condition) => FilterHandler.AddCondition(condition.ClientId);
+    public void AddCondition(RgfFilter.Condition condition) => FilterHandler.AddCondition(_logger, condition.ClientId);
     public void RemoveCondition(RgfFilter.Condition condition) => FilterHandler.RemoveCondition(condition.ClientId);
     public void AddBracket(RgfFilter.Condition condition) => FilterHandler.AddBracket(condition.ClientId);
     public void RemoveBracket(RgfFilter.Condition condition) => FilterHandler.RemoveBracket(condition.ClientId);
     public bool ChangeProperty(RgfFilter.Condition condition, int newPropertyId) => FilterHandler.ChangeProperty(condition, newPropertyId);
-    public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) => FilterHandler.ChangeQueryOperator(condition, newOperator);
+    public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) => FilterHandler.ChangeQueryOperator(_logger, condition, newOperator);
 
 
     private EditContext _emptyEditContext = new(new object());
