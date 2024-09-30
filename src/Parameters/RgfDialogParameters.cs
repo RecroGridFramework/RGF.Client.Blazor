@@ -82,6 +82,8 @@ public class ButtonParameters
         MinWidth = minWidth ?? (iconName == null ? "4.5rem" : null);
     }
 
+    public string? ButtonName { get; set; }
+
     public string? ChildText { get; set; }
 
     public string? CssClass { get; set; }

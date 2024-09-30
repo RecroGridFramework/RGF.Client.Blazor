@@ -183,7 +183,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
             if (edit)
             {
-                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)));
+                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)) { ButtonName = "Apply" });
             }
             buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
             if (edit)
@@ -192,6 +192,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             }
             FormParameters.DialogParameters.PredefinedButtons = buttons;
         }
+        var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.ParametersSet, this));
+        await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
 
         FormHandler = Manager.CreateFormHandler();
         var res = await FormHandler.InitializeAsync(entityKey);
