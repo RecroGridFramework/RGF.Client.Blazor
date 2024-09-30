@@ -89,11 +89,12 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         {
             _filterDialog = RgfDynamicDialog.Create(FilterParameters.DialogParameters, _logger);
         }
+        PredefinedFilter.QueryTimeout = Manager.ListHandler.SQLTimeout;
         _showComponent = true;
         StateHasChanged();
     }
 
-    public void OnClose(MouseEventArgs? args)
+    public void OnClose(MouseEventArgs? args = null)
     {
         if (FilterParameters.DialogParameters.OnClose != null)
         {
@@ -117,21 +118,17 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public void Recreate()
     {
         OnClose(null);
-        _ = Task.Run(() =>
-        {
-            Open();
-            StateHasChanged();
-        });
+        _ = Task.Run(() => { Open(); });
     }
 
-    public virtual void OnCancel(MouseEventArgs? args)
+    public virtual void OnCancel(MouseEventArgs? args = null)
     {
         PredefinedFilterName = string.Empty;
         FilterHandler.ResetFilter();
         OnClose(args);
     }
 
-    public virtual async Task OnOk(MouseEventArgs args)
+    public virtual async Task OnOk(MouseEventArgs? args = null)
     {
         _logger.LogDebug("RgfFilter.OnOk");
         _showComponent = false;
@@ -140,10 +137,22 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         await Manager.ListHandler.SetFilterAsync(conditions, PredefinedFilter.QueryTimeout);
     }
 
-    public virtual void OnSetPredefinedFilter(string key)
+    private void HandleKeyUp(KeyboardEventArgs e)
     {
-        _logger.LogDebug("SetPredefinedFilter: {key}", key);
-        var predefFilter = FilterHandler.SelectPredefinedFilter(key);
+        if (e.Key == "Enter")
+        {
+            Task.Run(async () => await OnOk());
+        }
+    }
+
+    public virtual void OnSetPredefinedFilter(string? key, string text)
+    {
+        _logger.LogDebug("SetPredefinedFilter: {key}:{text}", key, text);
+        RgfPredefinedFilter? predefFilter = null;
+        if (key != null)
+        {
+            predefFilter = FilterHandler.SelectPredefinedFilter(key);
+        }
         if (predefFilter != null)
         {
             PredefinedFilter = predefFilter;
@@ -153,7 +162,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         {
             PredefinedFilter = new()
             {
-                Name = key,
+                Name = text,
                 QueryTimeout = PredefinedFilter.QueryTimeout
             };
         }

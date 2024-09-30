@@ -3,7 +3,9 @@
 @if (_showComponent)
 {
     <EditForm EditContext="@_emptyEditContext">
-        @_filterDialog
+        <div tabindex="-1" style="outline: none;" @onkeyup="HandleKeyUp">
+            @_filterDialog
+        </div>
     </EditForm>
 }
 
