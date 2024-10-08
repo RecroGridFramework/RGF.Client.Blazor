@@ -29,7 +29,13 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public bool IsFiltered => Manager.IsFiltered;
 
+    public RgfGridSetting GridSetting { get; private set; } = new();
+
+    public List<RgfGridSetting> GridSettingList => Manager.GridSettingList;
+
     public BasePermissions BasePermissions => Manager.ListHandler.CRUD;
+
+    public bool IsPublicGridSettingAllowed => Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.PublicGridSetting);
 
     public bool IsSingleSelectedRow { get; private set; } = false;
 
@@ -208,11 +214,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         switch (menu.Command)
         {
             case Menu.SaveSettings:
-                await Manager.SaveColumnSettingsAsync(Manager.ListHandler.GetGridSettings());
+                await Manager.SaveGridSettingsAsync(Manager.ListHandler.GetGridSettings());
                 break;
 
             case Menu.ResetSettings:
-                await Manager.SaveColumnSettingsAsync(new RgfGridSettings(), true);
+                await Manager.SaveGridSettingsAsync(new RgfGridSettings(), true);
                 break;
 
             case Menu.RgfAbout:
@@ -236,6 +242,63 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 await OnMenuCommand(menu);
                 break;
         }
+    }
+
+    public virtual async Task OnSetGridSettingAsync(string? key, string text)
+    {
+        _logger.LogDebug("OnSetGridSetting: {key}:{text}", key, text);
+        if (key != null && int.TryParse(key, out int id))
+        {
+            var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == id);
+            if (gs != null && gs.GridSettingsId != 0)
+            {
+                GridSetting = gs;
+                await Manager.ListHandler.RefreshDataAsync(GridSetting.GridSettingsId);
+            }
+        }
+        else
+        {
+            bool isPublic = GridSetting.IsPublicNonNullable;
+            GridSetting = new()
+            {
+                SettingsName = text,
+                IsPublicNonNullable = isPublic
+            };
+        }
+    }
+
+    public virtual async Task<bool> OnSaveGridSettingsAsync()
+    {
+        var settings = Manager.ListHandler.GetGridSettings();
+        settings.GridSettingsId = GridSetting.GridSettingsId;
+        settings.SettingsName = GridSetting.SettingsName;
+        settings.IsPublic = GridSetting.IsPublic;
+        var res = await Manager.SaveGridSettingsAsync(settings);
+        if (res != null)
+        {
+            GridSetting.IsPublic = res.IsPublic;
+            if (GridSetting.GridSettingsId == null)
+            {
+                GridSetting.GridSettingsId = res.GridSettingsId;
+                GridSettingList.Add(GridSetting);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public virtual async Task<bool> OnDeleteGridSettingsAsync()
+    {
+        if (GridSetting.GridSettingsId != null && GridSetting.GridSettingsId != 0)
+        {
+            bool res = await Manager.DeleteGridSettingsAsync((int)GridSetting.GridSettingsId);
+            if (res)
+            {
+                GridSetting = new() { SettingsName = "" };//clear text input
+                return true;
+            }
+        }
+        return false;
     }
 
     private Task MenuRender(RgfMenu menu)
