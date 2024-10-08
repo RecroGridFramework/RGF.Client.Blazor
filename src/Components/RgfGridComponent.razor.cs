@@ -230,6 +230,22 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
+    public RgfDynamicData? GetColumnData(int rowIndex, string alias)
+    {
+        var rowData = Manager.ListHandler.GetRowData(rowIndex);
+        return rowData?.GetItemData(alias);
+    }
+
+    public RgfDynamicData? GetColumnData(int rowIndex, int propertyId)
+    {
+        var alias = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId)?.Alias;
+        if (string.IsNullOrEmpty(alias))
+        {   
+            return null;
+        }
+        return GetColumnData(rowIndex, alias);
+    }
+
     protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
     {
         try
