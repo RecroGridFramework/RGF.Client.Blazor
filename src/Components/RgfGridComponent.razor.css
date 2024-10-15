@@ -1,0 +1,13 @@
+﻿
+div.aggregates {
+    display: flex;
+    justify-content: center;
+}
+
+    div.aggregates table {
+        width: auto;
+    }
+
+    div.aggregates td {
+        text-align: right
+    }
