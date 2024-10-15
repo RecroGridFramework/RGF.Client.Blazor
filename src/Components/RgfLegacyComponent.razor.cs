@@ -61,10 +61,10 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
     private async Task LoadResourcesAsync()
     {
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
-        if (SriptReferences.Length == 0 || StylesheetsReferences.Length == 0)
+        if (StylesheetsReferences.Length == 0)
         {
-            var jquery = await _jsRuntime.InvokeAsync<bool>("eval", "window.jQuery?.ui?.version == '1.13.2'");
-            if (!jquery)
+            var jquiVer = await RgfBlazorConfiguration.ChkJQueryUiVer(_jsRuntime);
+            if (jquiVer < 0)
             {
                 await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jqueryui/jquery-ui.min.js");
             }
@@ -73,18 +73,21 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
             var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences/-legacy-blazor-", authClient: false);
             if (res.Success)
             {
-                SriptReferences = res.Result.Where(e => !RgfBlazorConfigurationExtension.SriptReferences.Contains(e)).ToArray();
+                var sriptReferences = res.Result.Where(e => !RgfBlazorConfigurationExtension.SriptReferences.Contains(e)).ToArray();
+                foreach (var item in sriptReferences)
+                {
+                    //await _jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddScriptLinkAsync", ApiService.BaseAddress + item, null, "rgf-legacy");
+                    await _jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
+                }
+                await _jsRuntime.InvokeVoidAsync("Recrovit.WebCli.InitRgfJqueryUiEx");
+
+                res = await api.GetAsync<string[]>("/rgf/api/RGFStylesheetsReferences", authClient: false);
+                if (res.Success)
+                {
+                    StylesheetsReferences = res.Result;
+                }
             }
-            res = await api.GetAsync<string[]>("/rgf/api/RGFStylesheetsReferences", authClient: false);
-            if (res.Success)
-            {
-                StylesheetsReferences = res.Result;
-            }
-            foreach (var item in SriptReferences)
-            {
-                //await _jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddScriptLinkAsync", ApiService.BaseAddress + item, null, "rgf-legacy");
-                await _jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
-            }
+
             await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
 #if DEBUG
                 "recrovit-rgf-blazor-legacy.js"
@@ -115,8 +118,6 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
 
     [JSInvokable]
     public string GetSessionId() => _sessionId;
-
-    private static string[] SriptReferences { get; set; } = [];
 
     private static string[] StylesheetsReferences { get; set; } = [];
 
