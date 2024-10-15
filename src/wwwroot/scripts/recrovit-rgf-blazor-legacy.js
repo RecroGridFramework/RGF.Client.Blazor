@@ -1,5 +1,5 @@
 ﻿/*!
-* recrovit-rgf-legacy.js v1.1.0
+* recrovit-rgf-legacy.js v1.1.1
 */
 
 window.Recrovit = window.Recrovit || {};
@@ -17,7 +17,7 @@ Blazor.Legacy = {
         await Recrovit.WebCli.RecroGrid.CreateRecroGridAsync(rgServiceParams, `#${containerId}`, null, null, dotNetRef);
     },
     CreateRecroSecAsync: async function (containerId, dotNetRef) {
-        var names = ['RS_ObjectPermission', 'RS_PermissionGroup', 'RS_RoleRolePriority', 'RS_vRecroSec_User', 'RS_PermissionType'];
+        var names = ['RS_ObjectPermission', 'RS_PermissionGroup', 'RS_PermissionType', 'RS_RoleRolePriority', 'RS_vRecroSec_User'];
         for (var i = 0; i < names.length; i++) {
             await BlazorLegacy.CreateRecroGridAsync(names[i], containerId, dotNetRef);
         }
