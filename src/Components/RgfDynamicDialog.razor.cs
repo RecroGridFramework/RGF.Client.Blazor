@@ -21,11 +21,7 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public static RenderFragment Create(RgfDialogParameters parameters, ILogger? logger = null)
     {
-        Type? type;
-        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Dialog, out type))
-        {
-            throw new NotImplementedException("The Dialog template component is missing.");
-        }
+        Type type = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Dialog);
         logger?.LogDebug("RgfDynamicDialog.Create");
         int build = 1;
         return builder =>

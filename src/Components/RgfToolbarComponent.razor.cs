@@ -118,11 +118,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         menu.Add(new(RgfMenuType.Function, "About RecroGrid Framework", Menu.RgfAbout));
 
-        Type? menuType;
-        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Menu, out menuType))
-        {
-            throw new NotImplementedException("The Menu template component is missing.");
-        }
+        Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
         var param = new RgfMenuParameters()
         {
             MenuItems = menu,
@@ -143,11 +139,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? CreateCustomMenu(object? icon = null)
     {
-        Type? type;
-        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Menu, out type))
-        {
-            throw new NotImplementedException("The Menu template component is missing.");
-        }
+        Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
         var customMenu = Manager.EntityDesc.Options.GetStringValue("RGO_CustomMenu");
         if (!string.IsNullOrEmpty(customMenu))
         {
@@ -165,7 +157,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 CustomMenu = builder =>
                 {
                     int sequence = 0;
-                    builder.OpenComponent(sequence++, type);
+                    builder.OpenComponent(sequence++, menuType);
                     builder.AddAttribute(sequence++, "MenuParameters", param);
                     builder.CloseComponent();
                 };

@@ -29,6 +29,15 @@ public class RgfBlazorConfiguration
         ComponentTypes[type] = typeof(TComponent);
     }
 
+    public static Type GetComponentType(ComponentType type)
+    {
+        if (!ComponentTypes.TryGetValue(type, out Type? componentType))
+        {
+            throw new NotImplementedException($"The {type} template component is missing.");
+        }
+        return componentType;
+    }
+
     public enum ComponentType
     {
         Menu,
