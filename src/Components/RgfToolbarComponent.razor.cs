@@ -45,7 +45,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? CustomMenu { get; set; }
 
-    public Func<RgfMenu, Task>? MenuRenderCallback { get; set; }
+    public Func<RgfMenu, Task>? OnMenuRender { get; set; }
 
     public RgfToolbarParameters ToolbarParameters { get => EntityParameters.ToolbarParameters; }
 
@@ -57,7 +57,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (args) => StateHasChanged()));
-        MenuRenderCallback = MenuRender;
+        OnMenuRender = MenuRender;
         CreateSettingsMenu();
         CreateCustomMenu();
     }
@@ -124,8 +124,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             MenuItems = menu,
             Navbar = false,
             Icon = icon,
-            MenuSelectionCallback = OnSettingsMenu,
-            MenuRenderCallback = MenuRenderCallback
+            OnMenuItemSelect = OnSettingsMenu,
+            OnMenuRender = OnMenuRender
         };
         SettingsMenu = builder =>
         {
@@ -151,8 +151,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                     MenuItems = menu.NestedMenu,
                     Navbar = false,
                     Icon = icon,
-                    MenuSelectionCallback = OnMenuCommand,
-                    MenuRenderCallback = MenuRenderCallback
+                    OnMenuItemSelect = OnMenuCommand,
+                    OnMenuRender = OnMenuRender
                 };
                 CustomMenu = builder =>
                 {
