@@ -267,6 +267,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         CultureInfo culture = _recroSec.UserCultureInfo();
         var listSeparator = culture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
+        await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export"), this);
         var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
         if (result != null)
         {
