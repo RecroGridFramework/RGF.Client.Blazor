@@ -106,7 +106,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager = new RgManager(param, _serviceProvider);
         Manager.RefreshEntity += Refresh;
         Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
-        Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage);
+        Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage);
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.EntityEditor, OnEntityEditorAsync, true);
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
             [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
