@@ -38,6 +38,8 @@ public class RgfBlazorConfiguration
         return componentType;
     }
 
+    public static bool TryGetComponentType(ComponentType type, out Type? componentType) => ComponentTypes.TryGetValue(type, out componentType);
+
     public enum ComponentType
     {
         Menu,

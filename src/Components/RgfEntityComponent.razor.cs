@@ -78,12 +78,12 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             EntityParameters.Manager = Manager;
         }
-        if (ChartTemplate == null && RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Chart, out var chartType))
+        if (ChartTemplate == null && RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out var chartType))
         {
             ChartTemplate = (par) => builder =>
             {
                 int sequence = 0;
-                builder.OpenComponent(sequence++, chartType);
+                builder.OpenComponent(sequence++, chartType!);
                 builder.AddAttribute(sequence++, "EntityParameters", par);
                 builder.CloseComponent();
             };

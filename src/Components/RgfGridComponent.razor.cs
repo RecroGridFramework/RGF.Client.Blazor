@@ -166,12 +166,12 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
 
         var aggregate = new[] { "Count(*)", "Sum", "Avg", "Min", "Max" };
-        var chartParam = new RgfChartParam()
+        var aggregateParam = new RgfAggregationSettings()
         {
-            Columns = aggregate.Select(e => new RgfGroupColumn() { Aggregate = e, PropertyId = propertyId }).ToList()
+            Columns = aggregate.Select(e => new RgfAggregationColumn() { Aggregate = e, PropertyId = propertyId }).ToList()
         };
 
-        var res = await Manager.ListHandler.GetChartDataAsync(chartParam);
+        var res = await Manager.ListHandler.GetAggregatedDataAsync(aggregateParam, false);
         if (!res.Success)
         {
             if (res.Messages?.Error != null)

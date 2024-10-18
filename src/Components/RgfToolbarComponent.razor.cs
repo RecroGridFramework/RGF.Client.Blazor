@@ -43,6 +43,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public RenderFragment? SettingsMenu { get; set; }
 
+    public bool EnableChart => Manager.EntityDesc.Options.GetBoolValue("RGO_ClientMode") != true && RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out _);
+
     public RenderFragment? CustomMenu { get; set; }
 
     public Func<RgfMenu, Task>? OnMenuRender { get; set; }
@@ -80,10 +82,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
             }
             menu.Add(new(RgfMenuType.Divider));
-            if (RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Chart, out _))
-            {
-                menu.Add(new(RgfMenuType.Function, "RecroChart", Menu.RecroChart));
-            }
+            //if (RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out _))
+            //{
+            //    menu.Add(new(RgfMenuType.Function, "RecroChart", Menu.RecroChart));
+            //}
             if (Manager.EntityDesc.IsRecroTrackReadable)
             {
                 menu.Add(new(RgfMenuType.Function, "RecroTrack", Menu.RecroTrack));

@@ -9,6 +9,7 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using System.Data;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -43,6 +44,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         await base.OnInitializedAsync();
 
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.RecroChart, OnShowChart);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.RecroChart, OnShowChart);
         ChartParameters = EntityParameters.ChartParameters;
         ChartParameters.DialogParameters.Title = "RecroChart";
         ChartParameters.DialogParameters.UniqueName = "chart-" + Manager.EntityDesc.NameVersion.ToLower();
@@ -62,6 +64,12 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             PropertyFormType.StaticText
         };
         ChartColumns = Manager.EntityDesc.Properties.Where(p => p.Readable && validFormTypes.Contains(p.FormType)).OrderBy(e => e.ColTitle).ToArray();
+    }
+
+    private void OnShowChart(IRgfEventArgs<RgfToolbarEventArgs> args)
+    {
+        args.Handled = true;
+        Open();
     }
 
     private void OnShowChart(IRgfEventArgs<RgfMenuEventArgs> args)
@@ -106,10 +114,11 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         return true;
     }
 
-    public virtual async Task<RgfChartDataResult> CreateChartDataAsyc(RgfChartParam chartParam)
+    public virtual async Task<RgfGridResult> CreateChartDataAsyc(RgfAggregationSettings chartParam)
     {
-        ChartData = new();
-        var res = await Manager.ListHandler.GetChartDataAsync(chartParam);
+        ChartData = [];
+        bool withGrid = true;
+        var res = await Manager.ListHandler.GetAggregatedDataAsync(chartParam, withGrid);
         if (!res.Success)
         {
             if (res.Messages?.Error != null)
@@ -125,10 +134,29 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         }
         else
         {
-            DataColumns = res.Result.DataColumns;
-            foreach (var item in res.Result.Data)
+            if (withGrid)
             {
-                ChartData.Add(new RgfDynamicDictionary(DataColumns, item));
+                var columns = new List<string>();
+                foreach (var item in res.Result.DataColumns)
+                {
+                    columns.Add(res.Result.EntityDesc.Properties.FirstOrDefault(p => p.ClientName == item)?.Alias ?? item);
+                }
+                DataColumns = columns.ToArray();
+                foreach (var item in res.Result.Data)
+                {
+                    var data = new RgfDynamicDictionary(DataColumns, item);
+                    data.Remove("__rgparams");
+                    ChartData.Add(data);
+                }
+                DataColumns = columns.Where(e => e != "__rgparams").ToArray();
+            }
+            else
+            {
+                DataColumns = res.Result.DataColumns;
+                foreach (var item in res.Result.Data)
+                {
+                    ChartData.Add(new RgfDynamicDictionary(DataColumns, item));
+                }
             }
         }
         return res.Result;
@@ -137,5 +165,6 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
     public void Dispose()
     {
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.RecroChart, OnShowChart);
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroChart, OnShowChart);
     }
 }
