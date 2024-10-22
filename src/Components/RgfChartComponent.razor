@@ -1,10 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
+@using Recrovit.RecroGridFramework.Client.Blazor.Parameters
 
 @if (_showComponent)
 {
-    <EditForm EditContext="@_emptyEditContext">
-        @_chartDialog
-    </EditForm>
+    @_chartDialog
 }
 
 <RgfDynamicDialog @ref="_dynamicDialog" />
@@ -15,7 +14,7 @@
     public RgfEntityParameters EntityParameters { get; set; } = null!;
 
     [Parameter, EditorRequired]
-    public RenderFragment<RgfChartComponent> ChartTemplate { get; set; } = null!;
+    public RenderFragment<RgfChartComponent> ContentTemplate { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfChartComponent> FooterTemplate { get; set; } = null!;

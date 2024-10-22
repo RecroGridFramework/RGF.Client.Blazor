@@ -29,6 +29,8 @@ public class RgfBlazorConfiguration
         ComponentTypes[type] = typeof(TComponent);
     }
 
+    public static void UnregisterComponent(ComponentType type) => ComponentTypes.Remove(type);
+
     public static Type GetComponentType(ComponentType type)
     {
         if (!ComponentTypes.TryGetValue(type, out Type? componentType))

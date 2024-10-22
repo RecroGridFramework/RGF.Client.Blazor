@@ -53,6 +53,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     private bool _showFormView { get; set; }
 
+    private bool _isChartInitialized;
+
     private string? EntityName { get; set; }
 
     private RenderFragment? _entityEditor { get; set; }
@@ -78,22 +80,12 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             EntityParameters.Manager = Manager;
         }
-        if (ChartTemplate == null && RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out var chartType))
-        {
-            ChartTemplate = (par) => builder =>
-            {
-                int sequence = 0;
-                builder.OpenComponent(sequence++, chartType!);
-                builder.AddAttribute(sequence++, "EntityParameters", par);
-                builder.CloseComponent();
-            };
-        }
     }
 
     private async Task CreateManagerAsync()
     {
         _logger.LogDebug("RgfEntityComponent.CreateManagerAsync");
-        var param = new RgfGridRequest(this.EntityParameters)
+        var gridRequest = EntityParameters.GridRequest ?? new RgfGridRequest(this.EntityParameters)
         {
             EntityName = this.EntityParameters.EntityName,
             Skeleton = true,
@@ -103,7 +95,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             CustomParams = EntityParameters.CustomParams
         };
 
-        Manager = new RgManager(param, _serviceProvider);
+        Manager = new RgManager(gridRequest, _serviceProvider);
         Manager.RefreshEntity += Refresh;
         Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
         Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage);
@@ -111,8 +103,14 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
             [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
             Manager.OnToolbarCommandAsync, true);
+        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.RecroChart, OnShowChart, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.RecroChart, OnShowChart, true);
 
-        if (await ((RgManager)Manager).InitializeAsync(param, this.EntityParameters.FormOnly))
+        if (EntityParameters.DeferredInitialization)
+        {
+            EntityParameters.Manager = Manager;
+        }
+        else if (await ((RgManager)Manager).InitializeAsync(gridRequest, this.EntityParameters.FormOnly))
         {
             EntityParameters.Manager = Manager;
             await InitResourcesAsync();
@@ -126,6 +124,26 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
             await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
+    }
+
+    private Task OnShowChart(IRgfEventArgs args)
+    {
+        if (ChartTemplate == null && RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out var chartType))
+        {
+            ChartTemplate = (par) => builder =>
+            {
+                int sequence = 0;
+                builder.OpenComponent(sequence++, chartType!);
+                builder.AddAttribute(sequence++, "EntityParameters", par);
+                builder.CloseComponent();
+            };
+        }
+        if (ChartTemplate != null)
+        {
+            _isChartInitialized = true;
+        }
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task InitResourcesAsync()

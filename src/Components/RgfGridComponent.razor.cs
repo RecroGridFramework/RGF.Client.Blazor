@@ -165,13 +165,14 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             return;
         }
 
-        var aggregate = new[] { "Count(*)", "Sum", "Avg", "Min", "Max" };
+        var aggregates = new List<string>() { "Count", "Sum", "Avg", "Min", "Max" };
+        aggregates.RemoveAll(item => !RgfAggregationColumn.AllowedAggregates.Contains(item));
         var aggregateParam = new RgfAggregationSettings()
         {
-            Columns = aggregate.Select(e => new RgfAggregationColumn() { Aggregate = e, PropertyId = propertyId }).ToList()
+            Columns = aggregates.Select(e => new RgfAggregationColumn() { Aggregate = e, PropertyId = propertyId }).ToList()
         };
 
-        var res = await Manager.ListHandler.GetAggregatedDataAsync(aggregateParam, false);
+        var res = await Manager.GetAggregateDataAsync(Manager.ListHandler.CreateAggregateRequest(aggregateParam));
         if (!res.Success)
         {
             if (res.Messages?.Error != null)
@@ -189,10 +190,11 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         {
             CultureInfo culture = _recroSec.UserCultureInfo();
             var details = new StringBuilder("<div class=\"aggregates\" rgf-grid-comp><table class=\"table\" rgf-grid-comp>");
-            for (int i = 0; i < aggregate.Length; i++)
+            foreach (var item in aggregates)
             {
-                var title = _recroDict.GetRgfUiString(i == 0 ? "ItemCount" : aggregate[i]);
-                var data = res.Result.Data[0][i];
+                var title = _recroDict.GetRgfUiString(item == "Count" ? "ItemCount" : item);
+                int idx = Array.FindIndex(res.Result.DataColumns, col => col.EndsWith("_" + item));
+                var data = res.Result.Data[0][idx];
                 try
                 {
                     var number = new RgfDynamicData(data).TryGetDecimal();

@@ -13,6 +13,13 @@ public class RgfEntityParameters : RgfSessionParams
         EntityName = entityName;
     }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the initialization process
+    /// is deferred and will not run automatically. When set to true, 
+    /// the initialization must be manually triggered at a later time.
+    /// </summary>
+    public bool DeferredInitialization { get; set; }
+
     public IRgManager? Manager { get; internal set; }
 
     public string EntityName { get; }
@@ -42,4 +49,6 @@ public class RgfEntityParameters : RgfSessionParams
     public Dictionary<string, object>? CustomParams { get; set; }
 
     public RgfEventDispatcher<RgfEntityEventKind, RgfEntityEventArgs> EventDispatcher { get; } = new();
+
+    internal RgfGridRequest? GridRequest { get; set; }
 }
