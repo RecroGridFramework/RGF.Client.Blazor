@@ -24,7 +24,7 @@
     {
         @FormTemplate(EntityParameters)
     }
-    @if (ChartTemplate != null)
+    if (_isChartInitialized && ChartTemplate != null)
     {
         @ChartTemplate(EntityParameters)
     }
@@ -33,7 +33,7 @@
         @_entityEditor
     }
 }
-else if (LoadingIndicator != null)
+else if (LoadingIndicator != null && !EntityParameters.DeferredInitialization)
 {
     @LoadingIndicator
 }

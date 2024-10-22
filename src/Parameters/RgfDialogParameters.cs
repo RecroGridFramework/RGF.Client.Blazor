@@ -20,6 +20,8 @@ public class RgfDialogParameters
 
     public string? Height { get; set; }
 
+    public string? MinWidth { get; set; }
+
     public string? CssClass { get; set; }
 
     public string? UniqueName { get; set; }

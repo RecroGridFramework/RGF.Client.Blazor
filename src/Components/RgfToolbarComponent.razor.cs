@@ -73,7 +73,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     public RenderFragment? CreateSettingsMenu(object? icon = null)
     {
         var menu = new List<RgfMenu>();
-        if (Manager.EntityDesc.Options.GetBoolValue("RGO_ClientMode") != true)
+        bool clientMode = Manager.EntityDesc.Options.GetBoolValue("RGO_ClientMode") == true;
+        if (!clientMode)
         {
             menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings));
             menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("SaveSettings"), Menu.SaveSettings));
@@ -82,43 +83,39 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ResetSettings"), Menu.ResetSettings));
             }
             menu.Add(new(RgfMenuType.Divider));
-            //if (RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out _))
-            //{
-            //    menu.Add(new(RgfMenuType.Function, "RecroChart", Menu.RecroChart));
-            //}
+            //if (RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out _)) { menu.Add(new(RgfMenuType.Function, "RecroChart", Menu.RecroChart)); }
             if (Manager.EntityDesc.IsRecroTrackReadable)
             {
                 menu.Add(new(RgfMenuType.Function, "RecroTrack", Menu.RecroTrack));
             }
-            if (Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.QueryString))
-            {
-                menu.Add(new(RgfMenuType.Function, "QueryString", Menu.QueryString));
-            }
-            if (Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.QuickWatch))
-            {
-                menu.Add(new(RgfMenuType.FunctionForRec, "QuickWatch", Menu.QuickWatch));
-            }
-            if (Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.Export))
-            {
-                var export = new RgfMenu()
-                {
-                    MenuType = RgfMenuType.Menu,
-                    Title = "Export"
-                };
-                export.NestedMenu.Add(new RgfMenu(RgfMenuType.Function, "Comma-separated values (CSV)", Menu.ExportCsv));
-                menu.Add(export);
-            }
-            /*if (_recroSec.IsAdmin)
-            {
-                var adminMenu = new List<RgfMenu>();
-                menu.Add(new(RgfMenuType.Menu, "Admin") { NestedMenu = adminMenu });
-                adminMenu.Add(new(RgfMenuType.Function, "Entity Editor", Menu.EntityEditor));
-            }*/
-            if ((menu.Count > 0 && menu.Last().MenuType != RgfMenuType.Divider))
-            {
-                menu.Add(new(RgfMenuType.Divider));
-            }
         }
+
+        if (Manager.ListHandler?.QueryString != null && Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.QueryString))
+        {
+            menu.Add(new(RgfMenuType.Function, "QueryString", Menu.QueryString));
+        }
+
+        if (!clientMode && Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.QuickWatch))
+        {
+            menu.Add(new(RgfMenuType.FunctionForRec, "QuickWatch", Menu.QuickWatch));
+        }
+
+        if ((!clientMode || Manager.EntityDesc.EntityName.Equals("RGRecroChart")) && Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.Export))
+        {
+            var export = new RgfMenu()
+            {
+                MenuType = RgfMenuType.Menu,
+                Title = "Export"
+            };
+            export.NestedMenu.Add(new RgfMenu(RgfMenuType.Function, "Comma-separated values (CSV)", Menu.ExportCsv));
+            menu.Add(export);
+        }
+
+        if ((menu.Count > 0 && menu.Last().MenuType != RgfMenuType.Divider))
+        {
+            menu.Add(new(RgfMenuType.Divider));
+        }
+
         menu.Add(new(RgfMenuType.Function, "About RecroGrid Framework", Menu.RgfAbout));
         Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
         var param = new RgfMenuParameters()
@@ -190,7 +187,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             }
             else
             {
-                Manager.BroadcastMessages(result.Messages, this);
+                await Manager.BroadcastMessages(result.Messages, this);
                 if (result.Result.RefreshGrid)
                 {
                     await Manager.ListHandler.RefreshDataAsync();
@@ -264,8 +261,6 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public virtual async Task<bool> OnSaveGridSettingsAsync()
     {
-        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("SaveSettings"), GridSetting.SettingsName);
-        await Manager.ToastManager.RaiseEventAsync(toast, this);
         var settings = Manager.ListHandler.GetGridSettings();
         settings.GridSettingsId = GridSetting.GridSettingsId;
         settings.SettingsName = GridSetting.SettingsName;
@@ -277,15 +272,16 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             if (GridSetting.GridSettingsId == null)
             {
                 GridSetting.GridSettingsId = res.GridSettingsId;
-                GridSettingList.Add(GridSetting);
+                GridSettingList.Insert(0, GridSetting);
             }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
             return true;
         }
         return false;
     }
 
-    public virtual async Task<bool> OnDeleteGridSettingsAsync()
+    public void OnDeleteGridSettingsAsync() => _dynamicDialog.PromptDeletionConfirmation(DeleteGridSettingsAsync, $"{_recroDict.GetRgfUiString("Setup")}: {GridSetting.SettingsName}");
+
+    public virtual async Task<bool> DeleteGridSettingsAsync()
     {
         if (GridSetting.GridSettingsId != null && GridSetting.GridSettingsId != 0)
         {
@@ -294,8 +290,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             bool res = await Manager.DeleteGridSettingsAsync((int)GridSetting.GridSettingsId);
             if (res)
             {
+                GridSetting.SettingsName = "";//clear text input
                 await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
-                GridSetting = new() { SettingsName = "" };//clear text input
+                StateHasChanged();
                 return true;
             }
         }
@@ -311,17 +308,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
-    public void OnDelete()
-    {
-        _dynamicDialog.Choice(
-            _recroDict.GetRgfUiString("Delete"),
-            _recroDict.GetRgfUiString("DelConfirm"),
-            [
-                new(_recroDict.GetRgfUiString("Yes"), (args) => OnToolbarCommand(RgfToolbarEventKind.Delete)),
-                new(_recroDict.GetRgfUiString("No"), isPrimary:true)
-            ],
-            DialogType.Warning);
-    }
+    public void OnDelete() => _dynamicDialog.PromptDeletionConfirmation(() => OnToolbarCommand(RgfToolbarEventKind.Delete));
 
     public void Dispose()
     {

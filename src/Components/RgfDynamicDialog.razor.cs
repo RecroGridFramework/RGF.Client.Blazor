@@ -100,6 +100,28 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public void Choice(string title, string message, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default) => Choice(title, (builder) => builder.AddMarkupContent(0, message), buttons, dialogType);
 
+    public void PromptDeletionConfirmation(Action deleteAction) => PromptDeletionConfirmation(() => { deleteAction(); return Task.CompletedTask; });
+
+    public void PromptDeletionConfirmation(Func<Task> deleteAction, string? titleSuffix = null)
+    {
+        var title = RecroDict.GetRgfUiString("Delete");
+        if (titleSuffix != null)
+        {
+            title += $" - {titleSuffix}";
+        }
+        this.Choice(
+            title,
+            RecroDict.GetRgfUiString("DelConfirm"),
+            new List<ButtonParameters>()
+            {
+                new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
+                    await deleteAction();
+                }),
+                new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
+            },
+            DialogType.Warning);
+    }
+
     public void Choice(string title, RenderFragment content, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default)
     {
         var key = ++_componentCount;

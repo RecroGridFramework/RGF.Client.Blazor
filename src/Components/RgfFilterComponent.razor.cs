@@ -31,13 +31,12 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public RgfFilterProperty[] RgfFilterProperties => FilterHandler.RgfFilterProperties;
 
-    public void AddCondition(RgfFilter.Condition condition) => FilterHandler.AddCondition(_logger, condition.ClientId);
-    public void RemoveCondition(RgfFilter.Condition condition) => FilterHandler.RemoveCondition(condition.ClientId);
-    public void AddBracket(RgfFilter.Condition condition) => FilterHandler.AddBracket(condition.ClientId);
-    public void RemoveBracket(RgfFilter.Condition condition) => FilterHandler.RemoveBracket(condition.ClientId);
-    public bool ChangeProperty(RgfFilter.Condition condition, int newPropertyId) => FilterHandler.ChangeProperty(condition, newPropertyId);
-    public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) => FilterHandler.ChangeQueryOperator(_logger, condition, newOperator);
-
+    public void AddCondition(RgfFilter.Condition condition) { FilterHandler.AddCondition(_logger, condition.ClientId); IsFilterActive = true; }
+    public void RemoveCondition(RgfFilter.Condition condition) { FilterHandler.RemoveCondition(condition.ClientId); IsFilterActive = true; }
+    public void AddBracket(RgfFilter.Condition condition) { FilterHandler.AddBracket(condition.ClientId); IsFilterActive = true; }
+    public void RemoveBracket(RgfFilter.Condition condition) { FilterHandler.RemoveBracket(condition.ClientId); IsFilterActive = true; }
+    public bool ChangeProperty(RgfFilter.Condition condition, int newPropertyId) { IsFilterActive = true; return FilterHandler.ChangeProperty(condition, newPropertyId); }
+    public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) { IsFilterActive = true; return FilterHandler.ChangeQueryOperator(_logger, condition, newOperator); }
 
     private EditContext _emptyEditContext = new(new object());
 
@@ -180,26 +179,20 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         }
     }
 
-    public virtual void OnDeletePredefinedFilter()
+    public void OnDeletePredefinedFilter() => _dynamicDialog.PromptDeletionConfirmation(DeletePredefinedFilter, $"{_recroDict.GetRgfUiString("Filter")}: {PredefinedFilter.Name}");
+
+    public virtual async Task<bool> DeletePredefinedFilter()
     {
-        _dynamicDialog.Choice(
-            _recroDict.GetRgfUiString("Delete"),
-            _recroDict.GetRgfUiString("DelConfirm"),
-            new List<ButtonParameters>()
-            {
-                new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => {
-                    var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), PredefinedFilter.Name);
-                    await Manager.ToastManager.RaiseEventAsync(toast, this);
-                    if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
-                    {
-                        PredefinedFilterName = string.Empty;
-                        await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
-                        StateHasChanged();
-                    }
-                }),
-                new ButtonParameters(_recroDict.GetRgfUiString("No"), isPrimary:true)
-            },
-            DialogType.Warning);
+        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), PredefinedFilter.Name);
+        await Manager.ToastManager.RaiseEventAsync(toast, this);
+        if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
+        {
+            PredefinedFilterName = string.Empty;
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+            StateHasChanged();
+            return true;
+        }
+        return false;
     }
 
     public void Dispose()

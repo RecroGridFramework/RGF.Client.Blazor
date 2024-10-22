@@ -52,7 +52,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
         Columns = Manager.EntityDesc.Properties
-            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity)
+            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity && e.FormType != PropertyFormType.ChartOnlyData)
             .Select(e => new GridColumnSettings(e))
             .OrderBy(e => e.ColPos == null)
             .ThenBy(e => e.ColPos)

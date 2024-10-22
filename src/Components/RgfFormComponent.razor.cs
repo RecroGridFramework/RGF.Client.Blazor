@@ -416,7 +416,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             }
             if (res.Messages != null)
             {
-                Manager.BroadcastMessages(res.Messages, this);
+                await Manager.BroadcastMessages(res.Messages, this);
             }
         }
         return res;
