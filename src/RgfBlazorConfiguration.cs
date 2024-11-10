@@ -51,7 +51,7 @@ public class RgfBlazorConfiguration
 
     public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
 
-    public static readonly string JQueryUiVer = "1.14.0";
+    public static readonly string JQueryUiVer = "1.14.1";
 
     public static ValueTask<int> ChkJQueryUiVer(IJSRuntime jsRuntime) => jsRuntime.InvokeAsync<int>("Recrovit.LPUtils.CompareJQueryUIVersion", JQueryUiVer);
 }
