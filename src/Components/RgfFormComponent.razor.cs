@@ -63,7 +63,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         base.OnInitialized();
 
         FormParameters.EventDispatcher.Subscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync, true);
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessage>(this, OnUserMessage));
+        Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage));
 
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
@@ -416,7 +416,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             }
             if (res.Messages != null)
             {
-                Manager.BroadcastMessages(res.Messages, this);
+                await Manager.BroadcastMessages(res.Messages, this);
             }
         }
         return res;

@@ -21,11 +21,7 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public static RenderFragment Create(RgfDialogParameters parameters, ILogger? logger = null)
     {
-        Type? type;
-        if (!RgfBlazorConfiguration.ComponentTypes.TryGetValue(RgfBlazorConfiguration.ComponentType.Dialog, out type))
-        {
-            throw new NotImplementedException("The Dialog template component is missing.");
-        }
+        Type type = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Dialog);
         logger?.LogDebug("RgfDynamicDialog.Create");
         int build = 1;
         return builder =>
@@ -103,6 +99,28 @@ public partial class RgfDynamicDialog : ComponentBase
     }
 
     public void Choice(string title, string message, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default) => Choice(title, (builder) => builder.AddMarkupContent(0, message), buttons, dialogType);
+
+    public void PromptDeletionConfirmation(Action deleteAction) => PromptDeletionConfirmation(() => { deleteAction(); return Task.CompletedTask; });
+
+    public void PromptDeletionConfirmation(Func<Task> deleteAction, string? titleSuffix = null)
+    {
+        var title = RecroDict.GetRgfUiString("Delete");
+        if (titleSuffix != null)
+        {
+            title += $" - {titleSuffix}";
+        }
+        this.Choice(
+            title,
+            RecroDict.GetRgfUiString("DelConfirm"),
+            new List<ButtonParameters>()
+            {
+                new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
+                    await deleteAction();
+                }),
+                new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
+            },
+            DialogType.Warning);
+    }
 
     public void Choice(string title, RenderFragment content, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default)
     {

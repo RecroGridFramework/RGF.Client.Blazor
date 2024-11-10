@@ -31,13 +31,13 @@ public partial class RgfGridColumnComponent : ComponentBase
         var objData = RowData?.GetMember(PropDesc.Alias);
         Data = objData?.ToString() ?? "";
         object? value;
+        CultureInfo culture = _recroSec.UserCultureInfo();
         if (PropDesc.Options?.TryGetValue("RGO_JSReplace", out value) == true)
         {
             Data = await _jsRuntime.InvokeAsync<string>(RgfBlazorConfiguration.JsBlazorNamespace + ".invokeGridColFuncAsync", value.ToString(), CreateJSArgs(EntityDesc, RowData, PropDesc, Data));
         }
         else if (objData is DateTime && PropDesc.ListType == PropertyListType.Date)
         {
-            CultureInfo culture = _recroSec.UserCultureInfo();
             if (PropDesc.FormType == PropertyFormType.DateTime)
             {
                 Data = string.Format("{0} {1}",
@@ -57,7 +57,7 @@ public partial class RgfGridColumnComponent : ComponentBase
             try
             {
                 var number = Convert.ToDecimal(objData);
-                Data = number.ToString("#,0.##", CultureInfo.CurrentCulture);
+                Data = number.ToString("#,0.##", culture);
             }
             catch { }
         }

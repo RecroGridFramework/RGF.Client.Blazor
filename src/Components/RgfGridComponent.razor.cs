@@ -7,6 +7,10 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using System.Data;
+using System.Drawing;
+using System.Globalization;
+using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -18,13 +22,19 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     [Inject]
     private IJSRuntime _jsRuntime { get; set; } = default!;
 
+    [Inject]
+    private IRecroDictService _recroDict { get; set; } = null!;
+
+    [Inject]
+    private IRecroSecService _recroSec { get; set; } = null!;
+
     public List<IDisposable> Disposables { get; private set; } = [];
 
     public ObservableProperty<List<RgfDynamicDictionary>> GridDataSource { get; private set; } = new([], nameof(GridDataSource));
 
     public List<RgfDynamicDictionary> GridData => GridDataSource.Value;
 
-    public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading;
+    public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading.Value;
 
     public List<RgfDynamicDictionary> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
 
@@ -34,6 +44,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = default!;
 
+    private RenderFragment? _headerMenu;
+
     private bool _isProcessing;
 
     protected override async Task OnInitializedAsync()
@@ -42,8 +54,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync, true);
 
-        Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (args) => _isProcessing = true));
+        Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (arg) => _isProcessing = true));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
+        Disposables.Add(Manager.ListHandler.IsLoading.OnAfterChange(this, (arg) => StateHasChanged()));
 
         await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
@@ -80,6 +93,133 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 await ExportCsvAsync();
                 arg.Handled = true;
                 break;
+        }
+    }
+
+    public RenderFragment ShowHeaderMenu(int propertyId, Point menuPosition)
+    {
+        var menu = new List<RgfMenu>();
+        var prop = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId);
+        if (prop?.ListType == PropertyListType.Numeric)
+        {
+            menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("Aggregates"), Menu.Aggregates) { Scope = propertyId.ToString() });
+        }
+        if (menu.Count > 0)
+        {
+            menu.Add(new(RgfMenuType.Divider));
+        }
+        menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("ColSettings"), Menu.ColumnSettings));
+
+        var param = new RgfMenuParameters()
+        {
+            MenuItems = menu,
+            Navbar = false,
+            OnMenuItemSelect = OnHeaderMenuCommand,
+            ContextMenuPosition = menuPosition,
+            OnMouseLeave = () =>
+            {
+                _headerMenu = null;
+                StateHasChanged();
+            }
+        };
+        Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
+        _headerMenu = builder =>
+        {
+            int sequence = 0;
+            builder.OpenComponent(sequence++, menuType);
+            builder.AddAttribute(sequence++, "MenuParameters", param);
+            builder.CloseComponent();
+        };
+        return _headerMenu;
+    }
+
+    private async Task OnHeaderMenuCommand(RgfMenu menu)
+    {
+        _logger.LogDebug("OnHeaderMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
+        _headerMenu = null;
+        StateHasChanged();
+
+        switch (menu.Command)
+        {
+            case Menu.ColumnSettings:
+                {
+                    var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
+                    var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.MenuType));
+                    await EntityParameters.ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
+                    return;
+                }
+
+            case Menu.Aggregates:
+                if (int.TryParse(menu.Scope, out var propertyId))
+                {
+                    await AggregatesAsync(propertyId);
+                }
+                break;
+        }
+    }
+
+    private async Task AggregatesAsync(int propertyId)
+    {
+        var prop = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId);
+        if (prop?.ListType != PropertyListType.Numeric)
+        {
+            return;
+        }
+
+        var aggregates = new List<string>() { "Count", "Sum", "Avg", "Min", "Max" };
+        aggregates.RemoveAll(item => !RgfAggregationColumn.AllowedAggregates.Contains(item));
+        var aggregateParam = new RgfAggregationSettings()
+        {
+            Columns = aggregates.Select(e => new RgfAggregationColumn() { Aggregate = e, Id = propertyId }).ToList()
+        };
+
+        var res = await Manager.GetAggregateDataAsync(Manager.ListHandler.CreateAggregateRequest(aggregateParam));
+        if (!res.Success)
+        {
+            if (res.Messages?.Error != null)
+            {
+                foreach (var item in res.Messages.Error)
+                {
+                    if (item.Key.Equals(RgfCoreMessages.MessageDialog))
+                    {
+                        _dynamicDialog.Alert(_recroDict.GetRgfUiString("Error"), item.Value);
+                    }
+                }
+            }
+        }
+        else
+        {
+            CultureInfo culture = _recroSec.UserCultureInfo();
+            var details = new StringBuilder("<div class=\"aggregates\" rgf-grid-comp><table class=\"table\" rgf-grid-comp>");
+            foreach (var item in aggregates)
+            {
+                var title = _recroDict.GetRgfUiString(item == "Count" ? "ItemCount" : item);
+                int idx = Array.FindIndex(res.Result.DataColumns, col => col.EndsWith("_" + item));
+                var data = res.Result.Data[0][idx];
+                try
+                {
+                    var number = new RgfDynamicData(data).TryGetDecimal();
+                    if (number != null)
+                    {
+                        data = ((decimal)number).ToString("#,0.##", culture);
+                    }
+                }
+                catch { }
+                details.AppendLine($"<tr><th>{title}</th><td rgf-grid-comp>{data}</td></tr>");
+            }
+            details.AppendLine("</table></div>");
+            var detailsStr = details.ToString();
+            RgfDialogParameters parameters = new()
+            {
+                Title = _recroDict.GetRgfUiString("Aggregates"),
+                ShowCloseButton = true,
+                ContentTemplate = (builder) =>
+                {
+                    int sequence = 0;
+                    builder.AddMarkupContent(sequence++, detailsStr);
+                }
+            };
+            _dynamicDialog.Dialog(parameters);
         }
     }
 
@@ -127,12 +267,15 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     protected async Task ExportCsvAsync()
     {
-        var listSeparator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+        CultureInfo culture = _recroSec.UserCultureInfo();
+        var listSeparator = culture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
+        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
+        await Manager.ToastManager.RaiseEventAsync(toast, this);
         var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
         if (result != null)
         {
-            Manager.BroadcastMessages(result.Messages, this);
+            await Manager.BroadcastMessages(result.Messages, this);
             if (result.Result?.Results != null)
             {
                 var stream = await Manager.GetResourceAsync<Stream>("export.csv", new Dictionary<string, string>() {
@@ -141,6 +284,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
+                    await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
                 }
@@ -240,7 +384,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         var alias = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId)?.Alias;
         if (string.IsNullOrEmpty(alias))
-        {   
+        {
             return null;
         }
         return GetColumnData(rowIndex, alias);

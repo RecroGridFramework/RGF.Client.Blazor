@@ -29,6 +29,19 @@ public class RgfBlazorConfiguration
         ComponentTypes[type] = typeof(TComponent);
     }
 
+    public static void UnregisterComponent(ComponentType type) => ComponentTypes.Remove(type);
+
+    public static Type GetComponentType(ComponentType type)
+    {
+        if (!ComponentTypes.TryGetValue(type, out Type? componentType))
+        {
+            throw new NotImplementedException($"The {type} template component is missing.");
+        }
+        return componentType;
+    }
+
+    public static bool TryGetComponentType(ComponentType type, out Type? componentType) => ComponentTypes.TryGetValue(type, out componentType);
+
     public enum ComponentType
     {
         Menu,
@@ -37,6 +50,10 @@ public class RgfBlazorConfiguration
     }
 
     public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
+
+    public static readonly string JQueryUiVer = "1.14.1";
+
+    public static ValueTask<int> ChkJQueryUiVer(IJSRuntime jsRuntime) => jsRuntime.InvokeAsync<int>("Recrovit.LPUtils.CompareJQueryUIVersion", JQueryUiVer);
 }
 
 public static class RgfBlazorConfigurationExtension
@@ -81,7 +98,6 @@ public static class RgfBlazorConfigurationExtension
     public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
     {
         var jsRuntime = serviceProvider.GetRequiredService<IJSRuntime>();
-        var api = serviceProvider.GetRequiredService<IRgfApiService>();
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
 
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery != 'undefined'");
@@ -90,25 +106,30 @@ public static class RgfBlazorConfigurationExtension
             await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
         }
 
-        var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences", authClient: false);
-        if (res.Success)
+        if (SriptReferences.Count() == 0)
         {
-            SriptReferences = res.Result;
-            foreach (var item in SriptReferences)
+            var api = serviceProvider.GetRequiredService<IRgfApiService>();
+            var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences", authClient: false);
+            if (res.Success)
             {
-                await jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
+                SriptReferences = res.Result;
+                foreach (var item in SriptReferences)
+                {
+                    await jsRuntime.InvokeAsync<IJSObjectReference>("import", ApiService.BaseAddress + item);
+                }
+                await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
             }
-            await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
-            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
-        }
-        await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
 #if DEBUG
-            "recrovit-rgf-blazor.js"
+                "recrovit-rgf-blazor.js"
 #else
             "recrovit-rgf-blazor.min.js"
 #endif
-            );
+                );
+
+            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
+        }
     }
 
-    internal static string[] SriptReferences { get; set; } = [];
+    public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }

@@ -4,6 +4,11 @@
 
 @CreateColumnSettings()
 
+@if(_headerMenu != null)
+{
+    @_headerMenu
+}
+
 <RgfDynamicDialog @ref="_dynamicDialog" />
 
 @code {
