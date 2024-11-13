@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -52,7 +53,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
         Columns = Manager.EntityDesc.Properties
-            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity && e.FormType != PropertyFormType.ChartOnlyData)
+            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity && e.Options?.GetBoolValue("RGO_AggregationRequired") != true)
             .Select(e => new GridColumnSettings(e))
             .OrderBy(e => e.ColPos == null)
             .ThenBy(e => e.ColPos)

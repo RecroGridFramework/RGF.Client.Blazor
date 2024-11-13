@@ -39,7 +39,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public bool IsSingleSelectedRow { get; private set; } = false;
 
-    public IRgManager Manager { get => EntityParameters.Manager!; }
+    public IRgManager Manager => EntityParameters.Manager!;
 
     public RenderFragment? SettingsMenu { get; set; }
 
@@ -176,17 +176,21 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             Manager.ListHandler.GetEntityKey(data, out entityKey);
         }
         var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
-        var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.MenuType, entityKey, data));
+        var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.Title, menu.MenuType, entityKey, data));
         var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
         if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
+            var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
+            await Manager.ToastManager.RaiseEventAsync(toast, this);
             var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
             if (result == null || !result.Success && result.Messages?.Error?.Any() != true)
             {
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
                 await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
             }
             else
             {
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                 await Manager.BroadcastMessages(result.Messages, this);
                 if (result.Result.RefreshGrid)
                 {

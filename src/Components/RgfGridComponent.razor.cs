@@ -144,7 +144,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             case Menu.ColumnSettings:
                 {
                     var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
-                    var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.MenuType));
+                    var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.Title, menu.MenuType));
                     await EntityParameters.ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
                     return;
                 }
@@ -284,11 +284,13 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                    await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
+                    return;
                 }
             }
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
         }
     }
 

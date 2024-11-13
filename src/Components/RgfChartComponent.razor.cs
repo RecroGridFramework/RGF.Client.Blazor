@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
-using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
@@ -81,10 +81,11 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             PropertyFormType.DropDown,
             PropertyFormType.Date,
             PropertyFormType.DateTime,
-            PropertyFormType.StaticText,
-            PropertyFormType.ChartOnlyData
+            PropertyFormType.StaticText
         };
-        AllowedProperties = Manager.EntityDesc.Properties.Where(p => p.Readable && !p.IsDynamic && validFormTypes.Contains(p.FormType)).OrderBy(e => e.ColTitle).ToArray();
+        AllowedProperties = Manager.EntityDesc.Properties
+            .Where(p => p.Readable && !p.IsDynamic && (validFormTypes.Contains(p.FormType) || p.Options?.GetBoolValue("RGO_AggregationRequired") == true))
+            .OrderBy(e => e.ColTitle).ToArray();
 
         ChartSettings.AggregationSettings.Columns = new List<RgfAggregationColumn> { new() { Id = 0, Aggregate = "Count" } };
 
