@@ -83,19 +83,19 @@ public static class RgfBlazorConfigurationExtension
 
     public static Task InitializeRgfBlazorServerAsync(this IServiceProvider serviceProvider) => serviceProvider.InitializeRgfBlazorAsync(false);
 
-    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider, bool clientSideRendering = true)
+    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider, bool clientSideRendering = true, bool shouldLoadBundledStyles = true)
     {
         await serviceProvider.InitializeRgfClientAsync(clientSideRendering);
         if (clientSideRendering)
         {
-            await LoadResourcesAsync(serviceProvider);
+            await LoadResourcesAsync(serviceProvider, shouldLoadBundledStyles);
         }
         var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
         logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", version);
     }
 
-    public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
+    public static async Task LoadResourcesAsync(IServiceProvider serviceProvider, bool shouldLoadBundledStyles = true)
     {
         var jsRuntime = serviceProvider.GetRequiredService<IJSRuntime>();
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
@@ -104,6 +104,11 @@ public static class RgfBlazorConfigurationExtension
         if (!jquery)
         {
             await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
+        }
+
+        if (shouldLoadBundledStyles)
+        {
+            await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css", false, BlazorCssLib);
         }
 
         if (SriptReferences.Count() == 0)
@@ -130,6 +135,8 @@ public static class RgfBlazorConfigurationExtension
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
         }
     }
+
+    private static readonly string BlazorCssLib = "rgf-client-blazor-lib";
 
     public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }
