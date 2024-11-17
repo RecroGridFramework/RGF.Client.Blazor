@@ -6,13 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Recrovit.RecroGridFramework.Client.Blazor</RootNamespace>
     <AssemblyName>Recrovit.RecroGridFramework.Client.Blazor</AssemblyName>
+    <StaticWebAssetFingerprintingEnabled>false</StaticWebAssetFingerprintingEnabled>
   </PropertyGroup>
 
   <PropertyGroup>
     <Company>Recrovit Kft.</Company>
     <Product>RecroGrid Framework</Product>
     <Copyright>© Recrovit Kft. All rights reserved.</Copyright>
-    <Version>8.11.0</Version>
+    <Version>8.11.1</Version>
     <FileVersion>$(Version).1$([System.DateTime]::Now.ToString(MMdd))</FileVersion>
     <InformationalVersion>$(FileVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -38,7 +39,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'=='Release'">
-    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.11.0" />
+    <PackageReference Include="Recrovit.RecroGridFramework.Client" Version="8.11.1" />
     <Content Update="wwwroot\scripts\recrovit-rgf-blazor.js" CopyToPublishDirectory="Never" />
     <Content Update="wwwroot\scripts\recrovit-rgf-blazor-legacy.js" CopyToPublishDirectory="Never" />
   </ItemGroup>
@@ -48,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Components\DynamicComponentWrapper.razor.css" CssScope="rgf-dynamic-wrapper-comp" />
     <None Update="Components\RgfGridComponent.razor.css" CssScope="rgf-grid-comp" />
   </ItemGroup>
 
