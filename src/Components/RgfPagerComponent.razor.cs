@@ -1,27 +1,25 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Handlers;
-using System;
-using System.Linq;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfPagerComponent : ComponentBase, IDisposable
 {
-    public List<IDisposable> Disposables { get; private set; } = new();
+    public List<IDisposable> Disposables { get; private set; } = [];
 
     public int CurrentPage => Manager.ActivePage.Value;
 
-    public int ItemCount { get => Manager.ItemCount.Value; }
+    public int ItemCount => Manager.ItemCount.Value;
 
     public int PageSize { get => Manager.PageSize.Value; set => Manager.PageSize.Value = value; }
 
     public int TotalPages { get; private set; }
 
-    public IRgManager Manager { get => EntityParameters.Manager!; }
+    public IRgManager Manager => EntityParameters.Manager!;
 
-    public RgfPagerParameters PagerParameters { get => EntityParameters.PagerParameters; }
-
+    public RgfPagerParameters PagerParameters => EntityParameters.PagerParameters;
 
     protected override void OnInitialized()
     {
@@ -45,19 +43,42 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
         }
     }
 
-    public void PageSizeChanging(string value)
+    public Task PageSizeChanging(string value)
     {
-        if (Int32.TryParse(value, out int pageSize))
+        if (Int32.TryParse(value, out int pageSize) && pageSize > 0)
         {
-            PageSizeChanging(pageSize);
+            return PageSizeChanging(pageSize);
         }
+        return Task.CompletedTask;
     }
 
-    public void PageSizeChanging(int pageSize)
+    public Task PageSizeChanging(int pageSize)
     {
         PageSize = pageSize;
         OnChangeItemCount(new ObservablePropertyEventArgs<int>(0, ItemCount));
-        _ = Manager.ListHandler.RefreshDataAsync();
+        return Manager.ListHandler.RefreshDataAsync();
+    }
+
+    public void OnKeyDown(KeyboardEventArgs args)
+    {
+        switch (args.Code)
+        {
+            case "Home":
+                PageChanging(1);
+                break;
+
+            case "PageUp":
+                PageChanging(CurrentPage - 1);
+                break;
+
+            case "PageDown":
+                PageChanging(CurrentPage + 1);
+                break;
+
+            case "End":
+                PageChanging(TotalPages);
+                break;
+        }
     }
 
     public void Dispose()
