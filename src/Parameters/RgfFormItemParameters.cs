@@ -25,3 +25,17 @@ public class RgfFormItemParameters
 
     public RgfDynamicData ItemData { get; }
 }
+
+public static class RgfFormItemParametersExtensions
+{
+    public static string GetFlexColumnClass(this RgfFormItemParameters self)
+    {
+        var width = self.Property.FlexColumnWidth ?? self.Group.FlexColumnWidth;
+        return width switch
+        {
+            0 => "col",
+            -1 => "col-auto",
+            _ => $"col-{width}"
+        };
+    }
+}

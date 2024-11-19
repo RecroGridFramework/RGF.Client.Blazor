@@ -15,7 +15,7 @@ public class RgfBlazorConfiguration
 {
     internal static Dictionary<string, Type> EntityComponentTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = new();
+    internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = [];
 
     public static void RegisterEntityComponent<TComponent>(string entityName) where TComponent : ComponentBase
     {
@@ -72,7 +72,7 @@ public static class RgfBlazorConfigurationExtension
                 services.AddTransient<RgfAuthorizationMessageHandler>();
                 authorizationMessageHandlerType = typeof(RgfAuthorizationMessageHandler);
             }
-            logger?.LogInformation($"Initializing AuthorizationMessageHandler for RecroGrid Framework API with type '{authorizationMessageHandlerType.Name}'.");
+            logger?.LogInformation("Initializing AuthorizationMessageHandler for RecroGrid Framework API with type '{AuthorizationMessageHandlerTypeName}'.", authorizationMessageHandlerType.Name);
             httpClientBuilder.Services.Configure<HttpClientFactoryOptions>(httpClientBuilder.Name, options =>
             {
                 options.HttpMessageHandlerBuilderActions.Add(b => b.AdditionalHandlers.Add((DelegatingHandler)b.Services.GetRequiredService(authorizationMessageHandlerType)));
@@ -83,19 +83,18 @@ public static class RgfBlazorConfigurationExtension
 
     public static Task InitializeRgfBlazorServerAsync(this IServiceProvider serviceProvider) => serviceProvider.InitializeRgfBlazorAsync(false);
 
-    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider, bool clientSideRendering = true, bool shouldLoadBundledStyles = true)
+    public static async Task InitializeRgfBlazorAsync(this IServiceProvider serviceProvider, bool clientSideRendering = true)
     {
         await serviceProvider.InitializeRgfClientAsync(clientSideRendering);
         if (clientSideRendering)
         {
-            await LoadResourcesAsync(serviceProvider, shouldLoadBundledStyles);
+            await LoadResourcesAsync(serviceProvider);
         }
-        var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
-        logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", version);
+        logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", FileVersion);
     }
 
-    public static async Task LoadResourcesAsync(IServiceProvider serviceProvider, bool shouldLoadBundledStyles = true)
+    public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
     {
         var jsRuntime = serviceProvider.GetRequiredService<IJSRuntime>();
         var libName = Assembly.GetExecutingAssembly().GetName().Name;
@@ -106,12 +105,7 @@ public static class RgfBlazorConfigurationExtension
             await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
         }
 
-        if (shouldLoadBundledStyles)
-        {
-            await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css", false, BlazorCssLib);
-        }
-
-        if (SriptReferences.Count() == 0)
+        if (!SriptReferences.Any())
         {
             var api = serviceProvider.GetRequiredService<IRgfApiService>();
             var res = await api.GetAsync<string[]>("/rgf/api/RGFSriptReferences", authClient: false);
@@ -134,9 +128,15 @@ public static class RgfBlazorConfigurationExtension
 
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
         }
+
+        await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-dynamic-wrapper-comp=\"\">",
+            $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css?v={FileVersion}", BlazorCssLib);
     }
 
     private static readonly string BlazorCssLib = "rgf-client-blazor-lib";
+
+    public static string FileVersion => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version;
+
 
     public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }

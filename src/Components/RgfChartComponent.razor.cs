@@ -388,6 +388,8 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             if (gs != null && gs.ChartSettingsId != 0)
             {
                 ChartSettings = gs;
+                var filterHandler = await Manager.GetFilterHandlerAsync();
+                await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Filter, ChartSettings.ParentGridSettings.SQLTimeout);
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEvent(Manager.EntityDesc.MenuTitle, RgfToastEvent.ActionTemplate(_recroDict.GetRgfUiString("Settings"), ChartSettings.SettingsName), delay: 2000), this);
                 return true;
             }
