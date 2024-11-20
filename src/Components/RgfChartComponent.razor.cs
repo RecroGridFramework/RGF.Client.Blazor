@@ -387,7 +387,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == id);
             if (gs != null && gs.ChartSettingsId != 0)
             {
-                ChartSettings = gs;
+                ChartSettings = (RgfChartSettings)gs.Clone();
                 var filterHandler = await Manager.GetFilterHandlerAsync();
                 await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Filter, ChartSettings.ParentGridSettings.SQLTimeout);
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEvent(Manager.EntityDesc.MenuTitle, RgfToastEvent.ActionTemplate(_recroDict.GetRgfUiString("Settings"), ChartSettings.SettingsName), delay: 2000), this);
@@ -412,8 +412,9 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             if (ChartSettings.ChartSettingsId == null || ChartSettings.ChartSettingsId == 0)
             {
                 ChartSettings.ChartSettingsId = res.ChartSettingsId;
-                ChartSettingList.Insert(0, ChartSettings);
             }
+            ChartSettingList.RemoveAll(e => e.ChartSettingsId == ChartSettings.ChartSettingsId);
+            ChartSettingList.Insert(0, (RgfChartSettings)ChartSettings.Clone());
             return true;
         }
         return false;

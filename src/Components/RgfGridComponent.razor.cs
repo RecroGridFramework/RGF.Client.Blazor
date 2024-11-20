@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -100,7 +101,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         var menu = new List<RgfMenu>();
         var prop = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId);
-        if (prop?.ListType == PropertyListType.Numeric)
+        bool clientMode = Manager.EntityDesc.Options.GetBoolValue("RGO_ClientMode") == true;
+        if (!clientMode && prop?.ListType == PropertyListType.Numeric)
         {
             menu.Add(new(RgfMenuType.Function, _recroDict.GetRgfUiString("Aggregates"), Menu.Aggregates) { Scope = propertyId.ToString() });
         }
