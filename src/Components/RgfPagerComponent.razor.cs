@@ -26,14 +26,15 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
         base.OnInitialized();
 
         Disposables.Add(Manager.ActivePage.OnAfterChange(this, (args) => StateHasChanged()));
-        Disposables.Add(Manager.ItemCount.OnAfterChange(this, OnChangeItemCount));
-        Disposables.Add(Manager.PageSize.OnAfterChange(this, (args) => { StateHasChanged(); }));
-        OnChangeItemCount(new ObservablePropertyEventArgs<int>(0, ItemCount));
+        Disposables.Add(Manager.ItemCount.OnAfterChange(this, (args) => RecalculateTotalPages(args.NewData)));
+        Disposables.Add(Manager.PageSize.OnAfterChange(this, (args) => RecalculateTotalPages(ItemCount)));
+        RecalculateTotalPages(ItemCount);
     }
 
-    public void OnChangeItemCount(ObservablePropertyEventArgs<int> args)
+    public void RecalculateTotalPages(int itemCount)
     {
-        TotalPages = PageSize > 0 ? (args.NewData + PageSize - 1) / PageSize : 0;
+        TotalPages = PageSize > 0 ? (itemCount + PageSize - 1) / PageSize : 0;
+        StateHasChanged();
     }
 
     public void PageChanging(int page)
@@ -56,7 +57,7 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
     public Task PageSizeChanging(int pageSize)
     {
         PageSize = pageSize;
-        OnChangeItemCount(new ObservablePropertyEventArgs<int>(0, ItemCount));
+        RecalculateTotalPages(ItemCount);
         return Manager.ListHandler.RefreshDataAsync();
     }
 
