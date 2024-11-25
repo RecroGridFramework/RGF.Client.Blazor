@@ -27,6 +27,7 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.ActivePage.OnAfterChange(this, (args) => StateHasChanged()));
         Disposables.Add(Manager.ItemCount.OnAfterChange(this, OnChangeItemCount));
+        Disposables.Add(Manager.PageSize.OnAfterChange(this, (args) => { StateHasChanged(); }));
         OnChangeItemCount(new ObservablePropertyEventArgs<int>(0, ItemCount));
     }
 
