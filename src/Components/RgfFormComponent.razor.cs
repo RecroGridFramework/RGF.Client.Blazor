@@ -42,21 +42,23 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public FormEditMode FormEditMode { get; set; }
 
-    public List<IDisposable> Disposables { get; private set; } = new();
+    public List<IDisposable> Disposables { get; private set; } = [];
 
     public IRgManager Manager { get => EntityParameters.Manager!; }
 
-    private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
-
-    private RgfEntityKey? _previousEntityKey { get; set; }
-
     private bool ShowDialog { get; set; }
 
-    private RenderFragment? _formDialog { get; set; }
+    private RgfDynamicDialog _dynamicDialog = null!;
 
-    private RgfDialogParameters? _selectDialogParameters { get; set; }
+    private RgfEntityKey? _previousEntityKey;
 
-    private RgfSelectParam? _selectParam { get; set; }
+    private RenderFragment? _formDialog;
+
+    private RgfDialogParameters? _selectDialogParameters;
+
+    private RgfEntityParameters? _selectEntityParameters;
+
+    private RgfSelectParam? _selectParam;
 
     protected override void OnInitialized()
     {
@@ -289,15 +291,21 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         _selectParam = arg.Args.SelectParam;
         if (_selectParam != null)
         {
+            _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam };
             _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
             _selectDialogParameters = new()
             {
                 Resizable = true,
                 ShowCloseButton = true,
                 UniqueName = "select-" + Manager.EntityDesc.NameVersion.ToLower(),
-                ContentTemplate = RgfEntityComponent.Create(new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam }, _logger),
+                ContentTemplate = RgfEntityComponent.Create(_selectEntityParameters, _logger),
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };
+            _selectEntityParameters.EventDispatcher.Subscribe(RgfEntityEventKind.Initialized, (arg) =>
+            {
+                _selectDialogParameters.Title = arg.Args.Manager.EntityDesc.MenuTitle;
+                _selectDialogParameters.Refresh?.Invoke();
+            });
             _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
             StateHasChanged();
@@ -319,6 +327,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.DynamicChild = null;
         _selectParam = null;
         _selectDialogParameters = null;
+        _selectEntityParameters = null;
         StateHasChanged();
     }
 
