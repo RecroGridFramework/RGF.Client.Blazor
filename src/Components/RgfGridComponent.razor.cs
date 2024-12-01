@@ -37,7 +37,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading.Value;
 
-    public List<RgfDynamicDictionary> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
+    public Dictionary<int, RgfEntityKey> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
 
     public IRgManager Manager { get => EntityParameters.Manager!; }
 
@@ -250,8 +250,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     protected void QuickWatch()
     {
         _logger.LogDebug("RgfGridComponent.QuickWatch");
-        var data = SelectedItems.FirstOrDefault();
-        if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
+        var entityKey = SelectedItems.FirstOrDefault().Value;
+        if (entityKey?.IsEmpty == false)
         {
             var param = new RgfEntityParameters("QuickWatch", Manager.SessionParams);
             param.FormParameters.FormViewKey.EntityKey = entityKey;
@@ -300,8 +300,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         _logger.LogDebug("RgfGridComponent.RecroTrack");
         var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
-        var data = SelectedItems.FirstOrDefault();
-        if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
+        var entityKey = SelectedItems.FirstOrDefault().Value;
+        if (entityKey?.IsEmpty == false)
         {
             param.FormParameters.FormViewKey.EntityKey = entityKey;
         }
@@ -412,10 +412,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             }
             GridDataSource.Value = args.NewData;
 
-            if (SelectedItems.Any())
+            if (SelectedItems.Any() && GridParameters.EnableMultiRowSelection != true)
             {
-                SelectedItems.Clear();
-                await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+                await Manager.SelectedItems.SetValueAsync(new());
             }
         }
         finally
@@ -424,23 +423,61 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
-    public virtual async Task RowSelectHandlerAsync(RgfDynamicDictionary rowData)
+    public List<RgfDynamicDictionary> SelectedRowsData
     {
-        //TODO: __rgparam SelectedItems.Add(rowData);
-        SelectedItems = [rowData];
-        await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+        get
+        {
+            var list = new List<RgfDynamicDictionary>();
+            foreach (var item in SelectedItems)
+            {
+                var rowData = Manager.ListHandler.GetRowData(item.Key);
+                if (rowData != null)
+                {
+                    list.Add(rowData);
+                }
+            }
+            return list;
+        }
     }
 
-    public virtual async Task RowDeselectHandlerAsync(RgfDynamicDictionary rowData)
+    public virtual async Task RowSelectHandlerAsync(RgfDynamicDictionary rowData)
     {
-        //TODO: __rgparam SelectedItems.Remove(rowData);
-        SelectedItems = [];
-        await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+        if (GridParameters.EnableMultiRowSelection == true)
+        {
+            var orig = SelectedItems.ToDictionary();
+            if (SelectedItems.TryAdd(rowIndexAndKey.Key, rowIndexAndKey.Value))
+            {
+                await Manager.SelectedItems.SendChangeNotificationAsync(new(orig, SelectedItems));
+            }
+        }
+        else
+        {
+            await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
+        }
+    }
+
+    public virtual async Task RowDeselectHandlerAsync(RgfDynamicDictionary? rowData)
+    {
+        if (rowData != null && GridParameters.EnableMultiRowSelection == true)
+        {
+            var orig = SelectedItems.ToDictionary();
+            var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+            if (SelectedItems.Remove(rowIndexAndKey.Key))
+            {
+                await Manager.SelectedItems.SendChangeNotificationAsync(new(orig, SelectedItems));
+            }
+        }
+        else
+        {
+            await Manager.SelectedItems.SetValueAsync(new());
+        }
     }
 
     public virtual Task OnRecordDoubleClickAsync(RgfDynamicDictionary rowData)
     {
-        SelectedItems = [rowData];
+        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+        SelectedItems = new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
         var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(Manager.SelectParam != null ? RgfToolbarEventKind.Select : RgfToolbarEventKind.Read));
         return EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
     }

@@ -138,7 +138,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                         var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
                         if (rowData != null)
                         {
-                            await Manager.SelectedItems.SetValueAsync([rowData]);
+                            var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+                            await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
                             var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, rowData));
                             await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
                         }

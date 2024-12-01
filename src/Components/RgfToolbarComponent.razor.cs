@@ -64,9 +64,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         CreateCustomMenu();
     }
 
-    public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind)
+    public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind, RgfDynamicDictionary? data = null)
     {
-        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(eventKind));
+        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(eventKind, data));
         return ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
     }
 
@@ -172,8 +172,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         RgfEntityKey? entityKey = default;
         if (menu.MenuType == RgfMenuType.FunctionForRec && this.IsSingleSelectedRow)
         {
-            data = Manager.SelectedItems.Value[0];
-            Manager.ListHandler.GetEntityKey(data, out entityKey);
+            var item = Manager.SelectedItems.Value.First();
+            entityKey = item.Value;
+            data = Manager.ListHandler.GetRowData(item.Key);
         }
         var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
         var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.Title, menu.MenuType, entityKey, data));
