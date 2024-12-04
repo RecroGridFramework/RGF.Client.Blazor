@@ -46,6 +46,8 @@ public class RgfEntityParameters : RgfSessionParams
 
     public bool FormOnly { get; set; }
 
+    public bool AutoOpenForm { get; set; }
+
     public RgfListParam? ListParam { get; set; }
 
     public Dictionary<string, object>? CustomParams { get; set; }

@@ -39,6 +39,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public Dictionary<int, RgfEntityKey> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
 
+    public List<RgfDynamicDictionary> SelectedRowsData => Manager.GetSelectedRowsData();
+
     public IRgManager Manager { get => EntityParameters.Manager!; }
 
     public RgfGridParameters GridParameters { get => EntityParameters.GridParameters; }
@@ -378,20 +380,20 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
-    public RgfDynamicData? GetColumnData(int rowIndex, string alias)
+    public RgfDynamicData? GetColumnData(int absoluteRowIndex, string alias)
     {
-        var rowData = Manager.ListHandler.GetRowData(rowIndex);
+        var rowData = Manager.ListHandler.GetRowData(absoluteRowIndex);
         return rowData?.GetItemData(alias);
     }
 
-    public RgfDynamicData? GetColumnData(int rowIndex, int propertyId)
+    public RgfDynamicData? GetColumnData(int absoluteRowIndex, int propertyId)
     {
         var alias = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId)?.Alias;
         if (string.IsNullOrEmpty(alias))
         {
             return null;
         }
-        return GetColumnData(rowIndex, alias);
+        return GetColumnData(absoluteRowIndex, alias);
     }
 
     protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
@@ -420,23 +422,6 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         finally
         {
             _isProcessing = false;
-        }
-    }
-
-    public List<RgfDynamicDictionary> SelectedRowsData
-    {
-        get
-        {
-            var list = new List<RgfDynamicDictionary>();
-            foreach (var item in SelectedItems)
-            {
-                var rowData = Manager.ListHandler.GetRowData(item.Key);
-                if (rowData != null)
-                {
-                    list.Add(rowData);
-                }
-            }
-            return list;
         }
     }
 

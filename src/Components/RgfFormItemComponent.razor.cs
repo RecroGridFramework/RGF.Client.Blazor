@@ -44,9 +44,9 @@ public partial class RgfFormItemComponent : ComponentBase
         //BaseFormComponent.FormValidation?.AddFieldError(_fieldId, $"Custom error");
     }
 
-    public Task FindEntityAsync(string filter)
+    public Task FindEntityAsync(string filter, bool formOnly = false)
     {
-        var eventArgs = new RgfFormEventArgs(RgfFormEventKind.FindEntity, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
+        var eventArgs = new RgfFormEventArgs(formOnly ? RgfFormEventKind.ShowRelatedEntity : RgfFormEventKind.FindEntity, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
         return FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
     }
 
@@ -80,14 +80,15 @@ public partial class RgfFormItemComponent : ComponentBase
         foreach (var item in Property.ForeignEntity.EntityKeys)
         {
             var clientName = $"rg-col-{item.Key}";
-            current.Keys.Add(clientName, formData.DataRec.GetMember(clientName));
+            var keyValue = formData.DataRec.GetMember(clientName);
+            current.Keys.Add(clientName, keyValue);
         }
         var selectParam = new RgfSelectParam()
         {
             EntityName = Property.ForeignEntity.EntityName,
             ParentKey = formData.EntityKey,
             PropertyId = Property.Id,
-            SelectedKey = current,
+            SelectedKeys = [current],
             Filter = new() { Keys = new RgfDynamicDictionary() { { $"rg-col-{Property.Id}", filter } } }
         };
         return selectParam;

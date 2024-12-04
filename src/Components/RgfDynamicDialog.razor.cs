@@ -14,6 +14,16 @@ public enum DialogType
     Error = 3
 }
 
+[Flags]
+public enum ApprovalType
+{
+    None = 0,
+    Yes = 1 << 0,   // 1
+    No = 1 << 1,    // 2
+    Cancel = 1 << 2,// 4
+    All = 1 << 3    // 8
+}
+
 public partial class RgfDynamicDialog : ComponentBase
 {
     [Inject]
@@ -64,7 +74,7 @@ public partial class RgfDynamicDialog : ComponentBase
                 dialogType = DialogType.Default;
                 break;
         }
-        Dialog(dialogType, message.Title, (builder) => builder.AddContent(0, message.Message));
+        Dialog(dialogType, message.Title, (builder) => builder.AddMarkupContent(0, message.Message));
     }
 
     public void Dialog(DialogType dialogType, string title, RenderFragment content)
@@ -100,26 +110,42 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public void Choice(string title, string message, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default) => Choice(title, (builder) => builder.AddMarkupContent(0, message), buttons, dialogType);
 
-    public void PromptDeletionConfirmation(Action deleteAction) => PromptDeletionConfirmation(() => { deleteAction(); return Task.CompletedTask; });
+    public void PromptDeletionConfirmation(Func<Task> deleteAction, string? titleSuffix = null) =>
+        PromptDeletionConfirmation(ApprovalType.Yes | ApprovalType.No, async (approval) =>
+        {
+            if (approval == ApprovalType.Yes)
+            {
+                await deleteAction();
+            }
+        }, titleSuffix);
 
-    public void PromptDeletionConfirmation(Func<Task> deleteAction, string? titleSuffix = null)
+    public void PromptDeletionConfirmation(ApprovalType availableOptions, Func<ApprovalType, Task> deleteAction, string? titleSuffix = null, ApprovalType primary = ApprovalType.No)
     {
         var title = RecroDict.GetRgfUiString("Delete");
-        if (titleSuffix != null)
+        if (!string.IsNullOrEmpty(titleSuffix))
         {
             title += $" - {titleSuffix}";
         }
-        this.Choice(
-            title,
-            RecroDict.GetRgfUiString("DelConfirm"),
-            new List<ButtonParameters>()
+        PromptActionConfirmation(title, RecroDict.GetRgfUiString("DelConfirm"), availableOptions, deleteAction, DialogType.Warning, primary);
+    }
+
+    public void PromptActionConfirmation(string title, string confirmationMessage, ApprovalType availableOptions, Func<ApprovalType, Task> action, DialogType dialogType = DialogType.Warning, ApprovalType primary = ApprovalType.Cancel)
+    {
+        var buttons = new List<ButtonParameters>();
+        void AddButton(ApprovalType type, string label)
+        {
+            if ((availableOptions & type) == type)
             {
-                new ButtonParameters(RecroDict.GetRgfUiString("Yes"), async (arg) => {
-                    await deleteAction();
-                }),
-                new ButtonParameters(RecroDict.GetRgfUiString("No"), isPrimary:true)
-            },
-            DialogType.Warning);
+                buttons.Add(new(RecroDict.GetRgfUiString(label), async (arg) => await action(type), type == primary));
+            }
+        }
+
+        AddButton(ApprovalType.Yes, "Yes");
+        AddButton(ApprovalType.No, "No");
+        AddButton(ApprovalType.All, "All");
+        AddButton(ApprovalType.Cancel, "Cancel");
+
+        Choice(title, confirmationMessage, buttons, dialogType);
     }
 
     public void Choice(string title, RenderFragment content, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default)

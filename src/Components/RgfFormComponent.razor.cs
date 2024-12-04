@@ -64,7 +64,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        FormParameters.EventDispatcher.Subscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync, true);
+        FormParameters.EventDispatcher.Subscribe([RgfFormEventKind.FindEntity, RgfFormEventKind.ShowRelatedEntity], OnFindEntityAsync, true);
         Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage));
 
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
@@ -293,6 +293,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         if (_selectParam != null)
         {
             _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam };
+            _selectEntityParameters.GridParameters.EnableMultiRowSelection = false;
+            _selectEntityParameters.AutoOpenForm = arg.Args.EventKind == RgfFormEventKind.ShowRelatedEntity;
             _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
             _selectDialogParameters = new()
             {
@@ -440,7 +442,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         if (prop != null)
         {
             var filter = param.Filter.Keys.First();
-            var key = param.SelectedKey.Keys.First();
+            var key = param.SelectedKeys.First().Keys.First();
             var foreign = prop.ForeignEntity.EntityKeys.First().Foreign;
             var keyProp = Manager.EntityDesc.Properties.SingleOrDefault(e => e.Id == foreign);
 
@@ -456,7 +458,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual void DisposeFormComponent()
     {
-        FormParameters.EventDispatcher.Unsubscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync);
+        FormParameters.EventDispatcher.Unsubscribe([RgfFormEventKind.FindEntity, RgfFormEventKind.ShowRelatedEntity], OnFindEntityAsync);
         if (Disposables != null)
         {
             Disposables.ForEach(disposable => disposable.Dispose());
