@@ -274,7 +274,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         CultureInfo culture = _recroSec.UserCultureInfo();
         var listSeparator = culture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
-        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
+        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
         var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
         if (result != null)
@@ -288,13 +288,13 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                    await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
                     return;
                 }
             }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
         }
     }
 

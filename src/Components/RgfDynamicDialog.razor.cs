@@ -56,7 +56,7 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public void Dialog(DialogType dialogType, string title, string message) => Dialog(dialogType, title, (builder) => builder.AddContent(0, message));
 
-    public void Dialog(RgfUserMessage message)
+    public void Dialog(RgfUserMessageEventArgs message)
     {
         DialogType dialogType;
         switch (message.Category)
@@ -108,7 +108,7 @@ public partial class RgfDynamicDialog : ComponentBase
         StateHasChanged();
     }
 
-    public void Choice(string title, string message, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default) => Choice(title, (builder) => builder.AddMarkupContent(0, message), buttons, dialogType);
+    public void Choice(string? title, string message, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default) => Choice(title, (builder) => builder.AddMarkupContent(0, message), buttons, dialogType);
 
     public void PromptDeletionConfirmation(Func<Task> deleteAction, string? titleSuffix = null) =>
         PromptDeletionConfirmation(ApprovalType.Yes | ApprovalType.No, async (approval) =>
@@ -129,14 +129,14 @@ public partial class RgfDynamicDialog : ComponentBase
         PromptActionConfirmation(title, RecroDict.GetRgfUiString("DelConfirm"), availableOptions, deleteAction, DialogType.Warning, primary);
     }
 
-    public void PromptActionConfirmation(string title, string confirmationMessage, ApprovalType availableOptions, Func<ApprovalType, Task> action, DialogType dialogType = DialogType.Warning, ApprovalType primary = ApprovalType.Cancel)
+    public void PromptActionConfirmation(string? title, string confirmationMessage, ApprovalType availableOptions, Func<ApprovalType, Task> action, DialogType dialogType = DialogType.Warning, ApprovalType primary = ApprovalType.Cancel)
     {
         var buttons = new List<ButtonParameters>();
         void AddButton(ApprovalType type, string label)
         {
             if ((availableOptions & type) == type)
             {
-                buttons.Add(new(RecroDict.GetRgfUiString(label), async (arg) => await action(type), type == primary));
+                buttons.Add(new(RecroDict.GetRgfUiString(label), (arg) => action(type), type == primary));
             }
         }
 
@@ -148,8 +148,32 @@ public partial class RgfDynamicDialog : ComponentBase
         Choice(title, confirmationMessage, buttons, dialogType);
     }
 
-    public void Choice(string title, RenderFragment content, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default)
+    public Task<ApprovalType> PromptActionConfirmationAsync(string? title, string confirmationMessage, ApprovalType availableOptions, DialogType dialogType = DialogType.Warning, ApprovalType primary = ApprovalType.Cancel)
     {
+        var _taskCompletionSource = new TaskCompletionSource<ApprovalType>();
+
+        PromptActionConfirmation(title, confirmationMessage, availableOptions, (arg) =>
+        {
+            _taskCompletionSource?.SetResult(arg);
+            _taskCompletionSource = null;
+            return Task.CompletedTask;
+        }, dialogType, primary);
+
+        return _taskCompletionSource.Task;
+    }
+
+    public void Choice(string? title, RenderFragment content, IEnumerable<ButtonParameters> buttons, DialogType dialogType = DialogType.Default)
+    {
+        if (string.IsNullOrEmpty(title))
+        {
+            title = dialogType switch
+            {
+                DialogType.Info => RecroDict.GetRgfUiString("Information"),
+                DialogType.Warning => RecroDict.GetRgfUiString("Warning"),
+                DialogType.Error => RecroDict.GetRgfUiString("Error"),
+                _ => title
+            };
+        }
         var key = ++_componentCount;
         RgfDialogParameters parameters = new()
         {

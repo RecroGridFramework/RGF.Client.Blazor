@@ -181,21 +181,21 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
         if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
-            var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
+            var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
             await Manager.ToastManager.RaiseEventAsync(toast, this);
             var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
             if (result == null)
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
-                await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, _recroDict.GetRgfUiString("MenuNotImplemented")), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
+                await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessageEventArgs(_recroDict, UserMessageType.Information, _recroDict.GetRgfUiString("MenuNotImplemented")), this);
             }
             else if (result.Success == false)
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Error"), RgfToastType.Error), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Error"), RgfToastType.Error), this);
             }
             else
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                 if (result.Result.RefreshGrid)
                 {
                     await Manager.ListHandler.RefreshDataAsync();
@@ -256,7 +256,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             if (gs != null && gs.GridSettingsId != 0)
             {
                 GridSetting = gs;
-                await Manager.ToastManager.RaiseEventAsync(new RgfToastEvent(Manager.EntityDesc.MenuTitle, RgfToastEvent.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
+                await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
                 await Manager.ListHandler.RefreshDataAsync(GridSetting.GridSettingsId);
             }
         }
@@ -297,13 +297,13 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     {
         if (GridSetting.GridSettingsId != null && GridSetting.GridSettingsId != 0)
         {
-            var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), GridSetting.SettingsName);
+            var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), GridSetting.SettingsName);
             await Manager.ToastManager.RaiseEventAsync(toast, this);
             bool res = await Manager.DeleteGridSettingsAsync((int)GridSetting.GridSettingsId);
             if (res)
             {
                 GridSetting.SettingsName = "";//clear text input
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                 StateHasChanged();
                 return true;
             }

@@ -46,7 +46,7 @@ public partial class RgfFormItemComponent : ComponentBase
 
     public Task FindEntityAsync(string filter, bool formOnly = false)
     {
-        var eventArgs = new RgfFormEventArgs(formOnly ? RgfFormEventKind.ShowRelatedEntity : RgfFormEventKind.FindEntity, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
+        var eventArgs = new RgfFormEventArgs(formOnly ? RgfFormEventKind.EntityDisplay : RgfFormEventKind.EntitySearch, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
         return FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
     }
 
