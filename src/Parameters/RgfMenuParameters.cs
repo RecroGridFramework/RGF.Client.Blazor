@@ -11,6 +11,8 @@ public class RgfMenuParameters
 
     public object? Icon { get; set; }
 
+    public bool? HideOnMouseLeave { get; set; }
+
     public List<RgfMenu>? MenuItems { get; set; }
 
     [Obsolete("Use OnMenuItemSelect instead")]
@@ -23,7 +25,7 @@ public class RgfMenuParameters
 
     public Func<RgfMenu, Task>? OnMenuRender { get; set; }
 
-    public Action? OnMouseLeave { get; set; }
+    public Func<bool>? OnMouseLeave { get; set; }
 
     public Point ContextMenuPosition { get; set; }
 }

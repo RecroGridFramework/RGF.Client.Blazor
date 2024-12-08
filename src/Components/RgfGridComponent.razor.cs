@@ -124,6 +124,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             {
                 _headerMenu = null;
                 StateHasChanged();
+                return true;
             }
         };
         Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
