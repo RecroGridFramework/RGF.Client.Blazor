@@ -334,7 +334,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         {
             return GridParameters.ColumnTemplate(param);
         }
-        return ColumnTemplate(param);
+        return ColumnTemplate != null ? ColumnTemplate(param) : DefaultColumnTemplate(param);
     }
 
     private void CreateAttributes(RgfEntity entityDesc, RgfDynamicDictionary rowData)
