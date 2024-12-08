@@ -132,9 +132,16 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
         CurrentEditContext?.NotifyValidationStateChanged();
     }
 
-    public void ReplaceFieldErrors(in FieldIdentifier fieldIdentifier, string message, bool notifyValidationStateChanged = true)
+    public void RemoveFieldErrorMessages(string alias) => RemoveFieldErrors(new FieldIdentifier(BaseFormComponent.FormData.DataRec, alias));
+
+    public void RemoveFieldErrors(in FieldIdentifier fieldIdentifier)
     {
         _messageStore.Clear(fieldIdentifier);
+    }
+
+    public void ReplaceFieldErrors(in FieldIdentifier fieldIdentifier, string message, bool notifyValidationStateChanged = true)
+    {
+        RemoveFieldErrors(fieldIdentifier);
         AddFieldError(fieldIdentifier, message, notifyValidationStateChanged);
     }
 
