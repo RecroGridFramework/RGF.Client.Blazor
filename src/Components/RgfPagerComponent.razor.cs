@@ -15,6 +15,8 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
 
     public int PageSize { get => Manager.PageSize.Value; set => Manager.PageSize.Value = value; }
 
+    public int SelectedItemCount => Manager.SelectedItems.Value.Count;
+
     public int TotalPages { get; private set; }
 
     public IRgManager Manager => EntityParameters.Manager!;
@@ -25,6 +27,7 @@ public partial class RgfPagerComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
+        Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => StateHasChanged()));
         Disposables.Add(Manager.ActivePage.OnAfterChange(this, (args) => StateHasChanged()));
         Disposables.Add(Manager.ItemCount.OnAfterChange(this, (args) => RecalculateTotalPages(args.NewData)));
         Disposables.Add(Manager.PageSize.OnAfterChange(this, (args) => RecalculateTotalPages(ItemCount)));

@@ -38,6 +38,8 @@ public class RgfDialogParameters
 
     public Action? Destroy { get; set; }
 
+    public Action? Refresh { get; set; }
+
     public IEnumerable<ButtonParameters>? PredefinedButtons { get; set; }
 
     public IEnumerable<ButtonParameters>? LeftButtons { get; set; }

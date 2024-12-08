@@ -16,8 +16,8 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public enum FormEditMode
 {
-    Create,
-    Update
+    Create = 1,
+    Update = 2
 }
 public partial class RgfFormComponent : ComponentBase, IDisposable
 {
@@ -42,28 +42,31 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public FormEditMode FormEditMode { get; set; }
 
-    public List<IDisposable> Disposables { get; private set; } = new();
+    public List<IDisposable> Disposables { get; private set; } = [];
 
     public IRgManager Manager { get => EntityParameters.Manager!; }
 
-    private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
-
-    private RgfEntityKey? _previousEntityKey { get; set; }
-
     private bool ShowDialog { get; set; }
 
-    private RenderFragment? _formDialog { get; set; }
+    private RgfDynamicDialog _dynamicDialog = null!;
 
-    private RgfDialogParameters? _selectDialogParameters { get; set; }
+    private RgfEntityKey? _previousEntityKey;
 
-    private RgfSelectParam? _selectParam { get; set; }
+    private RenderFragment? _formDialog;
+
+    private RgfDialogParameters? _selectDialogParameters;
+
+    private RgfEntityParameters? _selectEntityParameters;
+
+    private RgfSelectParam? _selectParam;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        FormParameters.EventDispatcher.Subscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync, true);
-        Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage));
+        FormParameters.EventDispatcher.Subscribe([RgfFormEventKind.EntitySearch, RgfFormEventKind.EntityDisplay], OnFindEntityAsync, true);
+        FormParameters.EventDispatcher.Subscribe(RgfFormEventKind.FormSaveStarted, OnFormSaveStartedAsync, true);
+        Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessageEventArgs>(OnUserMessage));
 
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
@@ -136,7 +139,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                         var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
                         if (rowData != null)
                         {
-                            await Manager.SelectedItems.SetValueAsync([rowData]);
+                            var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+                            await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
                             var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, rowData));
                             await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
                         }
@@ -155,7 +159,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                     [
                         new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) =>
                     {
-                        var success = await BeginSaveAsync(false);
+                        var success = await FormSaveStartAsync(false);
                         if(success)
                         {
                             await SetFormItemAsync(rowIndex);
@@ -183,12 +187,12 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
             if (edit)
             {
-                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => BeginSaveAsync(false)) { ButtonName = "Apply" });
+                buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => FormSaveStartAsync(false)) { ButtonName = "Apply" });
             }
             buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
             if (edit)
             {
-                buttons.Add(new("OK", (arg) => BeginSaveAsync(true), true));
+                buttons.Add(new("OK", (arg) => FormSaveStartAsync(true), true));
             }
             FormParameters.DialogParameters.PredefinedButtons = buttons;
         }
@@ -204,7 +208,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         return false;
     }
 
-    protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessage> args)
+    protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessageEventArgs> args)
     {
         if (args.Args.Origin == UserMessageOrigin.FormView)
         {
@@ -271,7 +275,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
                 _recroDict.GetRgfUiString("UnsavedConfirm"),
                 [
-                    new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => await BeginSaveAsync(true)),
+                    new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => await FormSaveStartAsync(true)),
                     new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => Close()),
                     new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), isPrimary:true)
                 ],
@@ -289,15 +293,23 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         _selectParam = arg.Args.SelectParam;
         if (_selectParam != null)
         {
+            _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam };
+            _selectEntityParameters.GridParameters.EnableMultiRowSelection = false;
+            _selectEntityParameters.AutoOpenForm = arg.Args.EventKind == RgfFormEventKind.EntityDisplay;
             _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
             _selectDialogParameters = new()
             {
                 Resizable = true,
                 ShowCloseButton = true,
                 UniqueName = "select-" + Manager.EntityDesc.NameVersion.ToLower(),
-                ContentTemplate = RgfEntityComponent.Create(new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam }, _logger),
+                ContentTemplate = RgfEntityComponent.Create(_selectEntityParameters, _logger),
                 OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
             };
+            _selectEntityParameters.EventDispatcher.Subscribe(RgfEntityEventKind.Initialized, (arg) =>
+            {
+                _selectDialogParameters.Title = arg.Args.Manager.EntityDesc.MenuTitle;
+                _selectDialogParameters.Refresh?.Invoke();
+            });
             _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
             StateHasChanged();
@@ -319,6 +331,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.DynamicChild = null;
         _selectParam = null;
         _selectDialogParameters = null;
+        _selectEntityParameters = null;
         StateHasChanged();
     }
 
@@ -332,7 +345,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", Services.ApiService.BaseAddress + FormData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
-            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
+            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormInitialized, this));
             await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
             _logger.LogDebug("FormDataInitialized");
             return true;
@@ -349,6 +362,18 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         }
 
         return CurrentEditContext.Validate();
+    }
+
+    public virtual async Task<bool> FormSaveStartAsync(bool close)
+    {
+        var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormSaveStarted, this, close: close));
+        var handled = await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
+        return handled;
+    }
+
+    private async Task OnFormSaveStartedAsync(IRgfEventArgs<RgfFormEventArgs> args)
+    {
+        args.Handled = await BeginSaveAsync(args.Args.Close);
     }
 
     public virtual async Task<bool> BeginSaveAsync(bool close)
@@ -430,7 +455,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         if (prop != null)
         {
             var filter = param.Filter.Keys.First();
-            var key = param.SelectedKey.Keys.First();
+            var key = param.SelectedKeys.First().Keys.First();
             var foreign = prop.ForeignEntity.EntityKeys.First().Foreign;
             var keyProp = Manager.EntityDesc.Properties.SingleOrDefault(e => e.Id == foreign);
 
@@ -446,7 +471,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual void DisposeFormComponent()
     {
-        FormParameters.EventDispatcher.Unsubscribe(RgfFormEventKind.FindEntity, OnFindEntityAsync);
+        FormParameters.EventDispatcher.Unsubscribe([RgfFormEventKind.EntitySearch, RgfFormEventKind.EntityDisplay], OnFindEntityAsync);
+        FormParameters.EventDispatcher.Unsubscribe(RgfFormEventKind.FormSaveStarted, OnFormSaveStartedAsync);
         if (Disposables != null)
         {
             Disposables.ForEach(disposable => disposable.Dispose());

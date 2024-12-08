@@ -96,8 +96,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager = new RgManager(gridRequest, _serviceProvider);
         Manager.RefreshEntity += Refresh;
         Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
-        Manager.NotificationManager.Subscribe<RgfUserMessage>(OnUserMessage);
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.EntityEditor, OnEntityEditorAsync, true);
+        Manager.NotificationManager.Subscribe<RgfUserMessageEventArgs>(OnUserMessage);
+        //EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.EntityEditor, OnEntityEditorAsync, true);
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
             [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
             Manager.OnToolbarCommandAsync, true);
@@ -108,8 +108,26 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             EntityParameters.Manager = Manager;
         }
-        else if (await ((RgManager)Manager).InitializeAsync(gridRequest, this.EntityParameters.FormOnly))
+        else if (await ((RgManager)Manager).InitializeAsync(gridRequest))
         {
+            if (EntityParameters.FormOnly || EntityParameters.AutoOpenForm)
+            {
+                if (Manager.ListHandler.ItemCount.Value == 1)
+                {
+                    var data = await Manager.ListHandler.GetDataListAsync();
+                    var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(data[0]);
+                    Manager.SelectedItems.Value = new Dictionary<int, RgfEntityKey> { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
+                }
+                else if (EntityParameters.FormOnly)
+                {
+                    EntityParameters.FormOnly = false;
+                    _logger.LogError("formOnly => ItemCount={ItemCount}", Manager.ListHandler.ItemCount.Value);
+                }
+                if (Manager.SelectedItems.Value.Count == 1)
+                {
+                    await Manager.OnToolbarCommandAsync(new RgfEventArgs<RgfToolbarEventArgs>(this, new(RgfToolbarEventKind.Read)));
+                }
+            }
             EntityParameters.Manager = Manager;
             await InitResourcesAsync();
             _initialized = true;
@@ -173,7 +191,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         });
     }
 
-    protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessage> args)
+    protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessageEventArgs> args)
     {
         if (args.Args.Origin == UserMessageOrigin.Global)
         {
@@ -217,7 +235,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.EntityEditor, OnEntityEditorAsync);
+        //EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.EntityEditor, OnEntityEditorAsync);
         if (Manager != null)
         {
             _logger.LogDebug("Manager.Dispose: {EntityName}", this.EntityName);

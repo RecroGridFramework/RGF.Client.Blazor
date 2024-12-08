@@ -44,9 +44,9 @@ public class RgfBlazorConfiguration
 
     public enum ComponentType
     {
-        Menu,
-        Dialog,
-        Chart,
+        Menu = 1,
+        Dialog = 2,
+        Chart = 3,
     }
 
     public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";

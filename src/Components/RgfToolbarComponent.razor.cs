@@ -64,9 +64,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         CreateCustomMenu();
     }
 
-    public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind)
+    public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind, RgfDynamicDictionary? data = null)
     {
-        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(eventKind));
+        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(eventKind, data));
         return ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
     }
 
@@ -168,30 +168,34 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     private async Task OnMenuCommand(RgfMenu menu)
     {
         _logger.LogDebug("OnMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
-        RgfDynamicDictionary? data = default;
-        RgfEntityKey? entityKey = default;
-        if (menu.MenuType == RgfMenuType.FunctionForRec && this.IsSingleSelectedRow)
+        RgfDynamicDictionary? data = null;
+        RgfEntityKey? entityKey = null;
+        if (menu.MenuType == RgfMenuType.FunctionForRec && Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
         {
-            data = Manager.SelectedItems.Value[0];
-            Manager.ListHandler.GetEntityKey(data, out entityKey);
+            var item = Manager.SelectedItems.Value.First();
+            entityKey = item.Value;
+            data = Manager.ListHandler.GetRowData(item.Key);
         }
         var eventName = string.IsNullOrEmpty(menu.Command) ? menu.MenuType.ToString() : menu.Command;
         var eventArgs = new RgfEventArgs<RgfMenuEventArgs>(this, new RgfMenuEventArgs(eventName, menu.Title, menu.MenuType, entityKey, data));
         var handled = await ToolbarParameters.MenuEventDispatcher.DispatchEventAsync(eventName, eventArgs);
         if (!handled && !string.IsNullOrEmpty(menu.Command))
         {
-            var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
+            var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
             await Manager.ToastManager.RaiseEventAsync(toast, this);
             var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
-            if (result == null || !result.Success && result.Messages?.Error?.Any() != true)
+            if (result == null)
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
-                await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessage(_recroDict, UserMessageType.Information, "This menu item is currently not implemented."), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
+                await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessageEventArgs(_recroDict, UserMessageType.Information, _recroDict.GetRgfUiString("MenuNotImplemented")), this);
+            }
+            else if (result.Success == false)
+            {
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Error"), RgfToastType.Error), this);
             }
             else
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
-                await Manager.BroadcastMessages(result.Messages, this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                 if (result.Result.RefreshGrid)
                 {
                     await Manager.ListHandler.RefreshDataAsync();
@@ -200,6 +204,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                 {
                     await Manager.ListHandler.RefreshRowAsync(result.Result.Row);
                 }
+            }
+            if (result?.Messages != null)
+            {
+                await Manager.BroadcastMessages(result.Messages, this);
             }
         }
     }
@@ -248,7 +256,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             if (gs != null && gs.GridSettingsId != 0)
             {
                 GridSetting = gs;
-                await Manager.ToastManager.RaiseEventAsync(new RgfToastEvent(Manager.EntityDesc.MenuTitle, RgfToastEvent.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
+                await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
                 await Manager.ListHandler.RefreshDataAsync(GridSetting.GridSettingsId);
             }
         }
@@ -289,13 +297,13 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     {
         if (GridSetting.GridSettingsId != null && GridSetting.GridSettingsId != 0)
         {
-            var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), GridSetting.SettingsName);
+            var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), GridSetting.SettingsName);
             await Manager.ToastManager.RaiseEventAsync(toast, this);
             bool res = await Manager.DeleteGridSettingsAsync((int)GridSetting.GridSettingsId);
             if (res)
             {
                 GridSetting.SettingsName = "";//clear text input
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                 StateHasChanged();
                 return true;
             }
@@ -307,12 +315,32 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
     {
         if (menu.MenuType == RgfMenuType.FunctionForRec)
         {
-            menu.Disabled = !IsSingleSelectedRow;
+            menu.Disabled = Manager.SelectedItems.Value.Count == 0 || (EntityParameters.GridParameters.EnableMultiRowSelection != true && Manager.SelectedItems.Value.Count > 1);
         }
         return Task.CompletedTask;
     }
 
-    public void OnDelete() => _dynamicDialog.PromptDeletionConfirmation(() => OnToolbarCommand(RgfToolbarEventKind.Delete));
+    public void OnDelete()
+    {
+        if (Manager.SelectedItems.Value.Count == 1)
+        {
+            var selected = Manager.SelectedItems.Value.First();
+            var rowData = Manager.ListHandler.GetRowData(selected.Key);
+            _dynamicDialog.PromptDeletionConfirmation(() => OnToolbarCommand(RgfToolbarEventKind.Delete, rowData));
+        }
+        else
+        {
+            var title = _recroDict.GetRgfUiString("Delete");
+            var confirmationMessage = string.Format(_recroDict.GetRgfUiString("DelConfirmBulk"), Manager.SelectedItems.Value.Count);
+            _dynamicDialog.PromptActionConfirmation(title, confirmationMessage, ApprovalType.All | ApprovalType.Cancel, async (approval) =>
+            {
+                if (approval == ApprovalType.All)
+                {
+                    await Manager.DeleteSelectedItemsAsync();
+                }
+            });
+        }
+    }
 
     public void Dispose()
     {

@@ -6,6 +6,8 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfGridParameters
 {
+    public bool? EnableMultiRowSelection { get; set; }
+
     public RenderFragment<RgfGridColumnParameters>? ColumnTemplate { get; set; }
 
     public RenderFragment<RgfGridComponent>? ColumnSettingsTemplate { get; set; }

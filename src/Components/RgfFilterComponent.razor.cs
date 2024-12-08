@@ -156,7 +156,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         {
             PredefinedFilter = predefFilter;
             Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
-            _ = Manager.ToastManager.RaiseEventAsync(new RgfToastEvent(Manager.EntityDesc.MenuTitle, RgfToastEvent.ActionTemplate(_recroDict.GetRgfUiString("Load"), PredefinedFilter.Name), delay: 2000), this);
+            _ = Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("Load"), PredefinedFilter.Name), delay: 2000), this);
         }
         else
         {
@@ -170,11 +170,11 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public virtual async Task OnSavePredefinedFilter()
     {
-        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("SaveSettings"), PredefinedFilter.Name);
+        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("SaveSettings"), PredefinedFilter.Name);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
         if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter))
         {
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
             StateHasChanged();
         }
     }
@@ -183,12 +183,12 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public virtual async Task<bool> DeletePredefinedFilter()
     {
-        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), PredefinedFilter.Name);
+        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), PredefinedFilter.Name);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
         if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
         {
             PredefinedFilterName = string.Empty;
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
             StateHasChanged();
             return true;
         }

@@ -37,7 +37,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading.Value;
 
-    public List<RgfDynamicDictionary> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
+    public Dictionary<int, RgfEntityKey> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
+
+    public List<RgfDynamicDictionary> SelectedRowsData => Manager.GetSelectedRowsData();
 
     public IRgManager Manager { get => EntityParameters.Manager!; }
 
@@ -250,8 +252,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     protected void QuickWatch()
     {
         _logger.LogDebug("RgfGridComponent.QuickWatch");
-        var data = SelectedItems.FirstOrDefault();
-        if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
+        var entityKey = SelectedItems.FirstOrDefault().Value;
+        if (entityKey?.IsEmpty == false)
         {
             var param = new RgfEntityParameters("QuickWatch", Manager.SessionParams);
             param.FormParameters.FormViewKey.EntityKey = entityKey;
@@ -272,7 +274,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         CultureInfo culture = _recroSec.UserCultureInfo();
         var listSeparator = culture.TextInfo.ListSeparator;
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
-        var toast = RgfToastEvent.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
+        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
         var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
         if (result != null)
@@ -286,13 +288,13 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                    await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
                     return;
                 }
             }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEvent.RemoveToast(toast), this);
+            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
         }
     }
 
@@ -300,8 +302,8 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
     {
         _logger.LogDebug("RgfGridComponent.RecroTrack");
         var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
-        var data = SelectedItems.FirstOrDefault();
-        if (data != null && Manager.ListHandler.GetEntityKey(data, out var entityKey) && entityKey != null)
+        var entityKey = SelectedItems.FirstOrDefault().Value;
+        if (entityKey?.IsEmpty == false)
         {
             param.FormParameters.FormViewKey.EntityKey = entityKey;
         }
@@ -332,7 +334,7 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         {
             return GridParameters.ColumnTemplate(param);
         }
-        return ColumnTemplate(param);
+        return ColumnTemplate != null ? ColumnTemplate(param) : DefaultColumnTemplate(param);
     }
 
     private void CreateAttributes(RgfEntity entityDesc, RgfDynamicDictionary rowData)
@@ -378,20 +380,20 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
-    public RgfDynamicData? GetColumnData(int rowIndex, string alias)
+    public RgfDynamicData? GetColumnData(int absoluteRowIndex, string alias)
     {
-        var rowData = Manager.ListHandler.GetRowData(rowIndex);
+        var rowData = Manager.ListHandler.GetRowData(absoluteRowIndex);
         return rowData?.GetItemData(alias);
     }
 
-    public RgfDynamicData? GetColumnData(int rowIndex, int propertyId)
+    public RgfDynamicData? GetColumnData(int absoluteRowIndex, int propertyId)
     {
         var alias = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId)?.Alias;
         if (string.IsNullOrEmpty(alias))
         {
             return null;
         }
-        return GetColumnData(rowIndex, alias);
+        return GetColumnData(absoluteRowIndex, alias);
     }
 
     protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
@@ -412,10 +414,9 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
             }
             GridDataSource.Value = args.NewData;
 
-            if (SelectedItems.Any())
+            if (SelectedItems.Any() && GridParameters.EnableMultiRowSelection != true)
             {
-                SelectedItems.Clear();
-                await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+                await Manager.SelectedItems.SetValueAsync(new());
             }
         }
         finally
@@ -426,21 +427,42 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
 
     public virtual async Task RowSelectHandlerAsync(RgfDynamicDictionary rowData)
     {
-        //TODO: __rgparam SelectedItems.Add(rowData);
-        SelectedItems = [rowData];
-        await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+        if (GridParameters.EnableMultiRowSelection == true)
+        {
+            var orig = SelectedItems.ToDictionary();
+            if (SelectedItems.TryAdd(rowIndexAndKey.Key, rowIndexAndKey.Value))
+            {
+                await Manager.SelectedItems.SendChangeNotificationAsync(new(orig, SelectedItems));
+            }
+        }
+        else
+        {
+            await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
+        }
     }
 
-    public virtual async Task RowDeselectHandlerAsync(RgfDynamicDictionary rowData)
+    public virtual async Task RowDeselectHandlerAsync(RgfDynamicDictionary? rowData)
     {
-        //TODO: __rgparam SelectedItems.Remove(rowData);
-        SelectedItems = [];
-        await Manager.SelectedItems.SendChangeNotificationAsync(new(new(), SelectedItems));
+        if (rowData != null && GridParameters.EnableMultiRowSelection == true)
+        {
+            var orig = SelectedItems.ToDictionary();
+            var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+            if (SelectedItems.Remove(rowIndexAndKey.Key))
+            {
+                await Manager.SelectedItems.SendChangeNotificationAsync(new(orig, SelectedItems));
+            }
+        }
+        else
+        {
+            await Manager.SelectedItems.SetValueAsync(new());
+        }
     }
 
     public virtual Task OnRecordDoubleClickAsync(RgfDynamicDictionary rowData)
     {
-        SelectedItems = [rowData];
+        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+        SelectedItems = new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
         var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(Manager.SelectParam != null ? RgfToolbarEventKind.Select : RgfToolbarEventKind.Read));
         return EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
     }

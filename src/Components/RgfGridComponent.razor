@@ -26,5 +26,7 @@
     public RenderFragment<RgfGridComponent> ColumnSettingsTemplate { get; set; } = null!;
 
     [Parameter]
-    public RenderFragment<RgfGridColumnParameters> ColumnTemplate { get; set; } = (param) => @<RgfGridColumnComponent GridColumnParameters="@param" />;
+    public RenderFragment<RgfGridColumnParameters>? ColumnTemplate { get; set; }
+
+    public RenderFragment<RgfGridColumnParameters> DefaultColumnTemplate => (param) => @<RgfGridColumnComponent GridColumnParameters="@param" />;
 }
