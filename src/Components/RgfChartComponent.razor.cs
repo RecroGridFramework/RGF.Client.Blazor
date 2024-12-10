@@ -103,7 +103,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         ChartParameters.DialogParameters.ContentTemplate = ContentTemplate(this);
         ChartParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
         ChartParameters.DialogParameters.Resizable ??= true;
-        ChartParameters.DialogParameters.Height = "620px";
+        ChartParameters.DialogParameters.Height = "700px";
         ChartParameters.DialogParameters.Width = "1020px";
         ChartParameters.DialogParameters.MinWidth = "920px";
 
@@ -112,7 +112,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             _chartDialog = EntityParameters.DialogTemplate(ChartParameters.DialogParameters);
         }
         else
-        {
+         {
             _chartDialog = RgfDynamicDialog.Create(ChartParameters.DialogParameters, _logger);
         }
 
@@ -408,7 +408,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         var res = await Manager.SaveChartSettingsAsync(ChartSettings);
         if (res != null)
         {
-            ChartSettings.IsPublic = res.IsPublic;
+            ChartSettings.RoleId = res.RoleId;
             if (ChartSettings.ChartSettingsId == null || ChartSettings.ChartSettingsId == 0)
             {
                 ChartSettings.ChartSettingsId = res.ChartSettingsId;

@@ -124,7 +124,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             Navbar = false,
             Icon = icon,
             OnMenuItemSelect = OnSettingsMenu,
-            OnMenuRender = OnMenuRender
+            OnMenuRender = OnMenuRender,
+            HideOnMouseLeave = true
         };
         SettingsMenu = builder =>
         {
@@ -151,7 +152,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                     Navbar = false,
                     Icon = icon,
                     OnMenuItemSelect = OnMenuCommand,
-                    OnMenuRender = OnMenuRender
+                    OnMenuRender = OnMenuRender,
+                    HideOnMouseLeave = true
                 };
                 CustomMenu = builder =>
                 {
@@ -262,11 +264,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
         else
         {
-            bool isPublic = GridSetting.IsPublicNonNullable;
             GridSetting = new()
             {
-                SettingsName = text,
-                IsPublicNonNullable = isPublic
+                SettingsName = text
             };
         }
     }
@@ -276,11 +276,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         var settings = Manager.ListHandler.GetGridSettings();
         settings.GridSettingsId = GridSetting.GridSettingsId;
         settings.SettingsName = GridSetting.SettingsName;
-        settings.IsPublic = GridSetting.IsPublic;
+        settings.RoleId = GridSetting.RoleId;
         var res = await Manager.SaveGridSettingsAsync(settings);
         if (res != null)
         {
-            GridSetting.IsPublic = res.IsPublic;
+            GridSetting.RoleId = res.RoleId;
             if (GridSetting.GridSettingsId == null)
             {
                 GridSetting.GridSettingsId = res.GridSettingsId;
