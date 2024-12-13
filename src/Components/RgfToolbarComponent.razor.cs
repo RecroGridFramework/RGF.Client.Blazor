@@ -124,7 +124,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             Navbar = false,
             Icon = icon,
             OnMenuItemSelect = OnSettingsMenu,
-            OnMenuRender = OnMenuRender
+            OnMenuRender = OnMenuRender,
+            HideOnMouseLeave = true
         };
         SettingsMenu = builder =>
         {
@@ -151,7 +152,8 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
                     Navbar = false,
                     Icon = icon,
                     OnMenuItemSelect = OnMenuCommand,
-                    OnMenuRender = OnMenuRender
+                    OnMenuRender = OnMenuRender,
+                    HideOnMouseLeave = true
                 };
                 CustomMenu = builder =>
                 {
@@ -247,28 +249,23 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
     }
 
-    public virtual async Task OnSetGridSettingAsync(string? key, string text)
+    public virtual async Task<bool> OnSetGridSettingAsync(int? gridSettingsId, string name)
     {
-        _logger.LogDebug("OnSetGridSetting: {key}:{text}", key, text);
-        if (key != null && int.TryParse(key, out int id))
+        _logger.LogDebug("OnSetGridSetting: {id}:{name}", gridSettingsId, name);
+        if (gridSettingsId > 0)
         {
-            var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == id);
-            if (gs != null && gs.GridSettingsId != 0)
+            var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == gridSettingsId);
+            if (gs?.GridSettingsId > 0)
             {
                 GridSetting = gs;
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
                 await Manager.ListHandler.RefreshDataAsync(GridSetting.GridSettingsId);
+                return true;
             }
         }
-        else
-        {
-            bool isPublic = GridSetting.IsPublicNonNullable;
-            GridSetting = new()
-            {
-                SettingsName = text,
-                IsPublicNonNullable = isPublic
-            };
-        }
+
+        GridSetting = new() { SettingsName = name };
+        return false;
     }
 
     public virtual async Task<bool> OnSaveGridSettingsAsync()
@@ -276,11 +273,11 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         var settings = Manager.ListHandler.GetGridSettings();
         settings.GridSettingsId = GridSetting.GridSettingsId;
         settings.SettingsName = GridSetting.SettingsName;
-        settings.IsPublic = GridSetting.IsPublic;
+        settings.RoleId = GridSetting.RoleId;
         var res = await Manager.SaveGridSettingsAsync(settings);
         if (res != null)
         {
-            GridSetting.IsPublic = res.IsPublic;
+            GridSetting.RoleId = res.RoleId;
             if (GridSetting.GridSettingsId == null)
             {
                 GridSetting.GridSettingsId = res.GridSettingsId;

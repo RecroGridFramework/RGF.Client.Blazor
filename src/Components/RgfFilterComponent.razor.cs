@@ -19,17 +19,21 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     [Inject]
     private IRecroDictService _recroDict { get; set; } = null!;
 
+    [Inject]
+    private IRecroSecService _recroSec { get; set; } = null!;
+
+
     public RgfFilterParameters FilterParameters { get; private set; } = default!;
 
     public RgfFilter.Condition? Condition { get; private set; }
 
-    public RgfPredefinedFilter PredefinedFilter { get; private set; } = new();
+    public RgfFilterSettings FilterSettings { get; private set; } = new();
 
-    public string PredefinedFilterName { get; set; } = string.Empty;
-
-    public bool IsPredefinedFilterAdmin => Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.PredefFilterAdmin);
+    public bool IsPublicFilterSettingAllowed => Manager.EntityDesc.Permissions.GetPermission(RgfPermissionType.PublicFilterSetting);
 
     public RgfFilterProperty[] RgfFilterProperties => FilterHandler.RgfFilterProperties;
+
+    public Dictionary<string, string> VisibleRoles => new[] { new KeyValuePair<string, string>("", "") }.Concat(_recroSec.Roles).ToDictionary(kv => kv.Key, kv => kv.Value);
 
     public void AddCondition(RgfFilter.Condition condition) { FilterHandler.AddCondition(_logger, condition.ClientId); IsFilterActive = true; }
     public void RemoveCondition(RgfFilter.Condition condition) { FilterHandler.RemoveCondition(condition.ClientId); IsFilterActive = true; }
@@ -88,7 +92,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         {
             _filterDialog = RgfDynamicDialog.Create(FilterParameters.DialogParameters, _logger);
         }
-        PredefinedFilter.QueryTimeout = Manager.ListHandler.SQLTimeout;
+        FilterSettings.SQLTimeout = Manager.ListHandler.SQLTimeout;
         _showComponent = true;
         StateHasChanged();
     }
@@ -122,7 +126,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public virtual void OnCancel(MouseEventArgs? args = null)
     {
-        PredefinedFilterName = string.Empty;
         FilterHandler.ResetFilter();
         OnClose(args);
     }
@@ -132,8 +135,8 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         _logger.LogDebug("RgfFilter.OnOk");
         _showComponent = false;
         OnClose(args);
-        var conditions = IsFilterActive ? FilterHandler.StoreFilter() : new RgfFilter.Condition[] { };
-        await Manager.ListHandler.SetFilterAsync(conditions, PredefinedFilter.QueryTimeout);
+        var conditions = IsFilterActive ? FilterHandler.StoreFilter() : [];
+        await Manager.ListHandler.SetFilterAsync(conditions, FilterSettings.SQLTimeout);
     }
 
     private void HandleKeyUp(KeyboardEventArgs e)
@@ -144,53 +147,60 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         }
     }
 
-    public virtual void OnSetPredefinedFilter(string? key, string text)
+    public virtual bool OnSetPredefinedFilter(int? filterSettingsId, string name)
     {
-        _logger.LogDebug("SetPredefinedFilter: {key}:{text}", key, text);
-        RgfPredefinedFilter? predefFilter = null;
-        if (key != null)
+        _logger.LogDebug("SetPredefinedFilter: {id}:{name}", filterSettingsId, name);
+        RgfFilterSettings? predefFilter = null;
+        if (filterSettingsId > 0)
         {
-            predefFilter = FilterHandler.SelectPredefinedFilter(key);
-        }
-        if (predefFilter != null)
-        {
-            PredefinedFilter = predefFilter;
-            Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
-            _ = Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("Load"), PredefinedFilter.Name), delay: 2000), this);
-        }
-        else
-        {
-            PredefinedFilter = new()
+            predefFilter = FilterHandler.SelectPredefinedFilter(filterSettingsId);
+            if (predefFilter != null)
             {
-                Name = text,
-                QueryTimeout = PredefinedFilter.QueryTimeout
-            };
+                FilterSettings = predefFilter;
+                Condition = new RgfFilter.Condition();
+                Task.Run(() =>
+                {
+                    Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
+                    StateHasChanged();
+                    _ = Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("Load"), FilterSettings.SettingsName), RgfToastType.Success, delay: 2000), this);
+                });
+                return true;
+            }
         }
+
+        FilterSettings = RgfFilterSettings.DeepCopy(FilterSettings);
+        FilterSettings.SettingsName = name;
+        FilterSettings.FilterSettingsId = null;
+        FilterSettings.IsReadonly = false;
+        return false;
     }
 
     public virtual async Task OnSavePredefinedFilter()
     {
-        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("SaveSettings"), PredefinedFilter.Name);
+        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("SaveSettings"), FilterSettings.SettingsName);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
-        if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter))
+        if (await FilterHandler.SaveFilterSettingsAsync(FilterSettings))
         {
             await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
             StateHasChanged();
         }
     }
 
-    public void OnDeletePredefinedFilter() => _dynamicDialog.PromptDeletionConfirmation(DeletePredefinedFilter, $"{_recroDict.GetRgfUiString("Filter")}: {PredefinedFilter.Name}");
+    public void OnDeletePredefinedFilter() => _dynamicDialog.PromptDeletionConfirmation(DeletePredefinedFilter, $"{_recroDict.GetRgfUiString("Filter")}: {FilterSettings.SettingsName}");
 
     public virtual async Task<bool> DeletePredefinedFilter()
     {
-        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), PredefinedFilter.Name);
-        await Manager.ToastManager.RaiseEventAsync(toast, this);
-        if (await FilterHandler.SavePredefinedFilterAsync(PredefinedFilter, true))
+        if (FilterSettings.FilterSettingsId != null && FilterSettings.FilterSettingsId != 0)
         {
-            PredefinedFilterName = string.Empty;
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
-            StateHasChanged();
-            return true;
+            var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, _recroDict.GetRgfUiString("Delete"), FilterSettings.SettingsName);
+            await Manager.ToastManager.RaiseEventAsync(toast, this);
+            if (await FilterHandler.DeleteFilterSettingsAsync(FilterSettings.FilterSettingsId.Value))
+            {
+                FilterSettings = new() { SettingsName = "", FilterSettingsId = null };
+                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                StateHasChanged();
+                return true;
+            }
         }
         return false;
     }

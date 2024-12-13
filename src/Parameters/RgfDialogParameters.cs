@@ -83,7 +83,7 @@ public class ButtonParameters
         IsPrimary = isPrimary;
         CssClass = cssClass;
         IconName = iconName;
-        MinWidth = minWidth ?? (iconName == null ? "4.5rem" : null);
+        MinWidth = minWidth ?? (iconName == null ? "5rem" : null);
     }
 
     public string? ButtonName { get; set; }

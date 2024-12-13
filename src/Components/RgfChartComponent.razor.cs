@@ -103,7 +103,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         ChartParameters.DialogParameters.ContentTemplate = ContentTemplate(this);
         ChartParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
         ChartParameters.DialogParameters.Resizable ??= true;
-        ChartParameters.DialogParameters.Height = "620px";
+        ChartParameters.DialogParameters.Height = "700px";
         ChartParameters.DialogParameters.Width = "1020px";
         ChartParameters.DialogParameters.MinWidth = "920px";
 
@@ -379,27 +379,26 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroChart, OnShowChart);
     }
 
-    public virtual async Task<bool> OnSetChartSettingAsync(string? key, string text)
+    public virtual async Task<bool> OnSetChartSettingAsync(int? chartSettingsId, string name)
     {
-        _logger.LogDebug("OnSetChartSetting: {key}:{text}", key, text);
-        if (key != null && int.TryParse(key, out int id))
+        _logger.LogDebug("OnSetChartSetting: {id}:{name}", chartSettingsId, name);
+        if (chartSettingsId > 0)
         {
-            var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == id);
-            if (gs != null && gs.ChartSettingsId != 0)
+            var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == chartSettingsId);
+            if (gs?.ChartSettingsId > 0)
             {
-                ChartSettings = (RgfChartSettings)gs.Clone();
+                ChartSettings = RgfChartSettings.DeepCopy(gs);
                 var filterHandler = await Manager.GetFilterHandlerAsync();
-                await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Filter, ChartSettings.ParentGridSettings.SQLTimeout);
+                await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Conditions, ChartSettings.ParentGridSettings.SQLTimeout);
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("Settings"), ChartSettings.SettingsName), delay: 2000), this);
                 return true;
             }
         }
-        else
-        {
-            ChartSettings = (RgfChartSettings)ChartSettings.Clone();
-            ChartSettings.SettingsName = text;
-            ChartSettings.ChartSettingsId = 0;
-        }
+
+        ChartSettings = RgfChartSettings.DeepCopy(ChartSettings);
+        ChartSettings.SettingsName = name;
+        ChartSettings.ChartSettingsId = null;
+        ChartSettings.IsReadonly = false;
         return false;
     }
 
@@ -408,13 +407,13 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         var res = await Manager.SaveChartSettingsAsync(ChartSettings);
         if (res != null)
         {
-            ChartSettings.IsPublic = res.IsPublic;
+            ChartSettings.RoleId = res.RoleId;
             if (ChartSettings.ChartSettingsId == null || ChartSettings.ChartSettingsId == 0)
             {
                 ChartSettings.ChartSettingsId = res.ChartSettingsId;
             }
             ChartSettingList.RemoveAll(e => e.ChartSettingsId == ChartSettings.ChartSettingsId);
-            ChartSettingList.Insert(0, (RgfChartSettings)ChartSettings.Clone());
+            ChartSettingList.Insert(0, RgfChartSettings.DeepCopy(ChartSettings));
             return true;
         }
         return false;
