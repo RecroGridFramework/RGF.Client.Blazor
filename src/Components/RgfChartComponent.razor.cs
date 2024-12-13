@@ -112,7 +112,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             _chartDialog = EntityParameters.DialogTemplate(ChartParameters.DialogParameters);
         }
         else
-         {
+        {
             _chartDialog = RgfDynamicDialog.Create(ChartParameters.DialogParameters, _logger);
         }
 
@@ -379,27 +379,26 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroChart, OnShowChart);
     }
 
-    public virtual async Task<bool> OnSetChartSettingAsync(string? key, string text)
+    public virtual async Task<bool> OnSetChartSettingAsync(int? chartSettingsId, string name)
     {
-        _logger.LogDebug("OnSetChartSetting: {key}:{text}", key, text);
-        if (key != null && int.TryParse(key, out int id))
+        _logger.LogDebug("OnSetChartSetting: {id}:{name}", chartSettingsId, name);
+        if (chartSettingsId > 0)
         {
-            var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == id);
-            if (gs != null && gs.ChartSettingsId != 0)
+            var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == chartSettingsId);
+            if (gs?.ChartSettingsId > 0)
             {
-                ChartSettings = (RgfChartSettings)gs.Clone();
+                ChartSettings = RgfChartSettings.DeepCopy(gs);
                 var filterHandler = await Manager.GetFilterHandlerAsync();
-                await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Filter, ChartSettings.ParentGridSettings.SQLTimeout);
+                await filterHandler.SetFilterAsync(ChartSettings.ParentGridSettings.Conditions, ChartSettings.ParentGridSettings.SQLTimeout);
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("Settings"), ChartSettings.SettingsName), delay: 2000), this);
                 return true;
             }
         }
-        else
-        {
-            ChartSettings = (RgfChartSettings)ChartSettings.Clone();
-            ChartSettings.SettingsName = text;
-            ChartSettings.ChartSettingsId = 0;
-        }
+
+        ChartSettings = RgfChartSettings.DeepCopy(ChartSettings);
+        ChartSettings.SettingsName = name;
+        ChartSettings.ChartSettingsId = null;
+        ChartSettings.IsReadonly = false;
         return false;
     }
 
@@ -414,7 +413,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
                 ChartSettings.ChartSettingsId = res.ChartSettingsId;
             }
             ChartSettingList.RemoveAll(e => e.ChartSettingsId == ChartSettings.ChartSettingsId);
-            ChartSettingList.Insert(0, (RgfChartSettings)ChartSettings.Clone());
+            ChartSettingList.Insert(0, RgfChartSettings.DeepCopy(ChartSettings));
             return true;
         }
         return false;

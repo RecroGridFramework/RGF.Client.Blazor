@@ -249,26 +249,23 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         }
     }
 
-    public virtual async Task OnSetGridSettingAsync(string? key, string text)
+    public virtual async Task<bool> OnSetGridSettingAsync(int? gridSettingsId, string name)
     {
-        _logger.LogDebug("OnSetGridSetting: {key}:{text}", key, text);
-        if (key != null && int.TryParse(key, out int id))
+        _logger.LogDebug("OnSetGridSetting: {id}:{name}", gridSettingsId, name);
+        if (gridSettingsId > 0)
         {
-            var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == id);
-            if (gs != null && gs.GridSettingsId != 0)
+            var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == gridSettingsId);
+            if (gs?.GridSettingsId > 0)
             {
                 GridSetting = gs;
                 await Manager.ToastManager.RaiseEventAsync(new RgfToastEventArgs(Manager.EntityDesc.MenuTitle, RgfToastEventArgs.ActionTemplate(_recroDict.GetRgfUiString("ColSettings"), GridSetting.SettingsName), delay: 2000), this);
                 await Manager.ListHandler.RefreshDataAsync(GridSetting.GridSettingsId);
+                return true;
             }
         }
-        else
-        {
-            GridSetting = new()
-            {
-                SettingsName = text
-            };
-        }
+
+        GridSetting = new() { SettingsName = name };
+        return false;
     }
 
     public virtual async Task<bool> OnSaveGridSettingsAsync()
