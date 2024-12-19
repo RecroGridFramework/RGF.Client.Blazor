@@ -48,7 +48,11 @@ public class RgfEntityParameters : RgfSessionParams
 
     public bool AutoOpenForm { get; set; }
 
+    public RfgDisplayMode? DisplayMode { get; set; }
+
     public RgfListParam? ListParam { get; set; }
+
+    public RgfFilterParent? FilterParent { get; set; }
 
     public Dictionary<string, object>? CustomParams { get; set; }
 

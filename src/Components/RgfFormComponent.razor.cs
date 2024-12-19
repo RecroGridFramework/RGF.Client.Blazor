@@ -72,8 +72,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
         FormParameters.DialogParameters.OnClose = OnClose;
-        FormParameters.DialogParameters.Width = FormParameters.DialogParameters.Width;// ?? "80%";
-        FormParameters.DialogParameters.Resizable = FormParameters.DialogParameters.Resizable ?? true;
+        //FormParameters.DialogParameters.Width ??= "80%";
+        FormParameters.DialogParameters.Resizable ??= true;
         FormParameters.DialogParameters.NoHeader = FormParameters.DialogParameters.HeaderTemplate == null;
     }
 
@@ -117,7 +117,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public Task PrevFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : FormParameters.FormViewKey.RowIndex - 1);
 
-    private bool _setFormItemActive;
+    public bool IsFormDataBeingSet { get; private set; }
 
     private async Task SetFormItemAsync(int rowIndex, bool ignoreChanges = false)
     {
@@ -131,11 +131,11 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             }
             if (ignoreChanges || !CurrentEditContext.IsModified())
             {
-                if (_setFormItemActive == false)
+                if (IsFormDataBeingSet == false)
                 {
                     try
                     {
-                        _setFormItemActive = true;
+                        IsFormDataBeingSet = true;
                         var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
                         if (rowData != null)
                         {
@@ -147,7 +147,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                     }
                     finally
                     {
-                        _setFormItemActive = false;
+                        IsFormDataBeingSet = false;
                     }
                 }
             }

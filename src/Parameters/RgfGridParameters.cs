@@ -10,7 +10,7 @@ public class RgfGridParameters
 
     public RenderFragment<RgfGridColumnParameters>? ColumnTemplate { get; set; }
 
-    public RenderFragment<RgfGridComponent>? ColumnSettingsTemplate { get; set; }
+    public RenderFragment<RgfDataComponentBase>? ColumnSettingsTemplate { get; set; }
 
     public RgfEventDispatcher<RgfListEventKind, RgfListEventArgs> EventDispatcher { get; } = new();
 }

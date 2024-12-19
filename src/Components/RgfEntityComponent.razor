@@ -6,11 +6,21 @@
         {
             @EntityParameters.TitleTemplate(Manager)
         }
-        <div id="@Manager.EntityDomId" class="@($"recro-grid recro-grid-base rg-ent-{Manager.EntityDesc.EntityId}")" style="width:fit-content">
+        <div id="@Manager.EntityDomId"
+        class="@($"recro-grid recro-grid-base{(EntityParameters.DisplayMode == RfgDisplayMode.Tree ? " rg-tree" : "")} rg-ent-{Manager.EntityDesc.EntityId}")"
+        style="width:fit-content">
             @if (!string.IsNullOrEmpty(Manager.EntityDesc.CRUD))
             {
                 @ToolbarTemplate(EntityParameters)
-                @GridTemplate(EntityParameters)
+                if (EntityParameters.DisplayMode == RfgDisplayMode.Tree && TreeTemplate != null)
+                {
+                    @TreeTemplate(EntityParameters)
+                }
+                else
+                {
+                    EntityParameters.DisplayMode = RfgDisplayMode.Grid;
+                    @GridTemplate(EntityParameters)
+                }
                 @PagerTemplate(EntityParameters)
                 @FilterTemplate(EntityParameters)
             }
@@ -50,6 +60,9 @@ else if (LoadingIndicator != null && !EntityParameters.DeferredInitialization)
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfEntityParameters> GridTemplate { get; set; } = null!;
+
+    [Parameter]
+    public RenderFragment<RgfEntityParameters>? TreeTemplate { get; set; }
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfEntityParameters> FilterTemplate { get; set; } = null!;
