@@ -69,6 +69,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         Disposables.Add(Manager.ListHandler.IsLoading.OnAfterChange(this, (arg) => StateHasChanged()));
 
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ToggleQuickFilter, OnToggleQuickFilter);
 
         await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
     }
@@ -106,6 +107,11 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
                 arg.Handled = true;
                 break;
         }
+    }
+
+    protected void OnToggleQuickFilter(IRgfEventArgs<RgfToolbarEventArgs> args)
+    {
+        StateHasChanged();
     }
 
     protected void ShowQueryString()
@@ -309,6 +315,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
     public virtual void Dispose()
     {
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync);
+        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ToggleQuickFilter, OnToggleQuickFilter);
 
         if (Disposables != null)
         {
