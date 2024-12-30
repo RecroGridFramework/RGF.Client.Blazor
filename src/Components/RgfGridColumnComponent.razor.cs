@@ -17,7 +17,7 @@ public partial class RgfGridColumnComponent : ComponentBase
 
     private ElementReference _elementRef;
 
-    private RgfEntity EntityDesc => GridColumnParameters.BaseGridComponent.Manager.EntityDesc;
+    private RgfEntity EntityDesc => GridColumnParameters.DataComponentBase.Manager.EntityDesc;
 
     private RgfProperty PropDesc => GridColumnParameters.PropDesc;
 
@@ -132,7 +132,7 @@ public partial class RgfGridColumnComponent : ComponentBase
                     attributes = attributes.GetOrNew<RgfDynamicDictionary>(alias);
                 }
                 var val = string.Join(separator, list);
-                attributes.Set<string>(key, (old) => string.IsNullOrEmpty(old) ? val : $"{old.Trim(separator)}{separator}{val}");
+                attributes.Set<string>(key, (old) => string.IsNullOrEmpty(old) ? val : old.EnsureContains(val, separator));
             }
         }
     }

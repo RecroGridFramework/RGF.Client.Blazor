@@ -23,7 +23,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public RgfDialogParameters DialogParameters { get; set; } = new();
 
-    private IRgManager Manager => BaseGridComponent.Manager;
+    private IRgManager Manager => BaseDataComponent.Manager;
 
     private RenderFragment? _settingsDialog { get; set; }
 
@@ -31,7 +31,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     {
         base.OnInitialized();
 
-        BaseGridComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.ColumnSettings, ShowColumnSettingsAsync, true);
+        BaseDataComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.ColumnSettings, ShowColumnSettingsAsync, true);
 
         DialogParameters.Title = _recroDict.GetRgfUiString("ColSettings");
         DialogParameters.ShowCloseButton = true;
@@ -67,9 +67,9 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         }
 
         DialogParameters.OnClose = Close; //We'll reset it in case the dialog might have overwritten it
-        if (BaseGridComponent.EntityParameters.DialogTemplate != null)
+        if (BaseDataComponent.EntityParameters.DialogTemplate != null)
         {
-            _settingsDialog = BaseGridComponent.EntityParameters.DialogTemplate(DialogParameters);
+            _settingsDialog = BaseDataComponent.EntityParameters.DialogTemplate(DialogParameters);
         }
         else
         {
@@ -106,13 +106,13 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         bool changed = await Manager.ListHandler.SetVisibleColumnsAsync(Columns);
         if (changed)
         {
-            var eventArgs = new RgfListEventArgs(RgfListEventKind.ColumnSettingsChanged, BaseGridComponent, properties: Manager.EntityDesc.SortedVisibleColumns);
-            await BaseGridComponent.EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
+            var eventArgs = new RgfListEventArgs(RgfListEventKind.ColumnSettingsChanged, BaseDataComponent, properties: Manager.EntityDesc.SortedVisibleColumns);
+            await BaseDataComponent.EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
         }
     }
 
     public void Dispose()
     {
-        BaseGridComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.ColumnSettings, ShowColumnSettingsAsync);
+        BaseDataComponent.EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.ColumnSettings, ShowColumnSettingsAsync);
     }
 }

@@ -49,7 +49,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public Func<RgfMenu, Task>? OnMenuRender { get; set; }
 
-    public RgfToolbarParameters ToolbarParameters { get => EntityParameters.ToolbarParameters; }
+    public RgfToolbarParameters ToolbarParameters => EntityParameters.ToolbarParameters;
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
 
@@ -310,6 +310,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     private Task MenuRender(RgfMenu menu)
     {
+        menu.Disabled = EntityParameters.DisplayMode == RfgDisplayMode.Tree && new string[] { Menu.ColumnSettings, Menu.SaveSettings, Menu.ResetSettings }.Contains(menu.Command);
         if (menu.MenuType == RgfMenuType.FunctionForRec)
         {
             menu.Disabled = Manager.SelectedItems.Value.Count == 0 || (EntityParameters.GridParameters.EnableMultiRowSelection != true && Manager.SelectedItems.Value.Count > 1);

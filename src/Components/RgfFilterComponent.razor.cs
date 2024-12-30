@@ -69,6 +69,8 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         FilterParameters.DialogParameters.ContentTemplate = FilterTemplate(this);
         FilterParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
         FilterParameters.DialogParameters.Resizable = FilterParameters.DialogParameters.Resizable ?? true;
+        FilterParameters.DialogParameters.Width ??= "700px";
+        FilterParameters.DialogParameters.Height ??= "400px";
     }
 
     protected virtual async Task OnShowFilter(IRgfEventArgs<RgfToolbarEventArgs> args)

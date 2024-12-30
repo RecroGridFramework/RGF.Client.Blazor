@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -91,6 +92,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         gridRequest.SelectParam = EntityParameters.SelectParam;
         gridRequest.EntityKey = EntityParameters.FormParameters?.FormViewKey.EntityKey;
         gridRequest.ListParam = EntityParameters.ListParam;
+        gridRequest.FilterParent = EntityParameters.FilterParent;
         gridRequest.CustomParams = EntityParameters.CustomParams;
 
         Manager = new RgManager(gridRequest, _serviceProvider);
@@ -101,6 +103,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
             [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
             Manager.OnToolbarCommandAsync, true);
+        EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.ToggleDisplayMode, OnToggleDisplayModeAsync, true);
         EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe(Menu.RecroChart, OnShowChart, true);
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(RgfToolbarEventKind.RecroChart, OnShowChart, true);
 
@@ -129,6 +132,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                 }
             }
             EntityParameters.Manager = Manager;
+            EntityParameters.DisplayMode ??= Enum.TryParse(Manager.EntityDesc.Options.GetStringValue("RGO_DisplayMode"), out RfgDisplayMode mode) ? mode : RfgDisplayMode.Grid;
             await InitResourcesAsync();
             _initialized = true;
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
@@ -140,6 +144,20 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
             await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
         }
+    }
+
+    private Task OnToggleDisplayModeAsync(IRgfEventArgs<RgfToolbarEventArgs> args)
+    {
+        if (args.Args.Data?.TryGetValue(nameof(RgfToolbarEventKind.ToggleDisplayMode), out var mode) == true && mode is RfgDisplayMode displayMode)
+        {
+            if (displayMode == RfgDisplayMode.Tree && TreeTemplate == null)
+            {
+                return Task.CompletedTask;
+            }
+            EntityParameters.DisplayMode = displayMode;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
     }
 
     private Task OnShowChart(IRgfEventArgs args)
@@ -240,8 +258,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             _logger.LogDebug("Manager.Dispose: {EntityName}", this.EntityName);
             EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(
-                [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
-                Manager.OnToolbarCommandAsync);
+                [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select], Manager.OnToolbarCommandAsync);
+            EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ToggleDisplayMode, OnToggleDisplayModeAsync);
             Manager.Dispose();
             Manager = null;
         }

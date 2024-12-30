@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Extensions;
@@ -15,89 +14,14 @@ using System.Text;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
-public partial class RgfGridComponent : ComponentBase, IDisposable
+public partial class RgfGridComponent : RgfDataComponentBase
 {
     [Inject]
     private ILogger<RgfGridComponent> _logger { get; set; } = default!;
 
-    [Inject]
-    private IJSRuntime _jsRuntime { get; set; } = default!;
-
-    [Inject]
-    private IRecroDictService _recroDict { get; set; } = null!;
-
-    [Inject]
-    private IRecroSecService _recroSec { get; set; } = null!;
-
-    public List<IDisposable> Disposables { get; private set; } = [];
-
-    public ObservableProperty<List<RgfDynamicDictionary>> GridDataSource { get; private set; } = new([], nameof(GridDataSource));
-
-    public List<RgfDynamicDictionary> GridData => GridDataSource.Value;
-
-    public bool IsProcessing => _isProcessing || Manager.ListHandler.IsLoading.Value;
-
-    public Dictionary<int, RgfEntityKey> SelectedItems { get => Manager.SelectedItems.Value; set => Manager.SelectedItems.Value = value; }
-
-    public List<RgfDynamicDictionary> SelectedRowsData => Manager.GetSelectedRowsData();
-
-    public IRgManager Manager { get => EntityParameters.Manager!; }
-
-    public RgfGridParameters GridParameters { get => EntityParameters.GridParameters; }
-
-    private RgfDynamicDialog _dynamicDialog { get; set; } = default!;
+    public RgfGridParameters GridParameters => EntityParameters.GridParameters;
 
     private RenderFragment? _headerMenu;
-
-    private bool _isProcessing;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Subscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync, true);
-
-        Disposables.Add(Manager.ListHandler.ListDataSource.OnBeforeChange(this, (arg) => _isProcessing = true));
-        Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (arg) => Task.Run(() => OnChangedGridDataAsync(arg))));
-        Disposables.Add(Manager.ListHandler.IsLoading.OnAfterChange(this, (arg) => StateHasChanged()));
-
-        await OnChangedGridDataAsync(new(GridData, Manager.ListHandler.ListDataSource.Value));
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-
-        var eventArg = new RgfEventArgs<RgfListEventArgs>(this, RgfListEventArgs.CreateAfterRenderEvent(this, firstRender));
-        await GridParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-        _logger.LogDebug("OnAfterRender");
-    }
-
-    protected async Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
-    {
-        switch (arg.Args.Command)
-        {
-            case Menu.QueryString:
-                ShowQueryString();
-                arg.Handled = true;
-                break;
-
-            case Menu.QuickWatch:
-                QuickWatch();
-                arg.Handled = true;
-                break;
-
-            case Menu.RecroTrack:
-                RecroTrack();
-                arg.Handled = true;
-                break;
-
-            case Menu.ExportCsv:
-                await ExportCsvAsync();
-                arg.Handled = true;
-                break;
-        }
-    }
 
     public RenderFragment ShowHeaderMenu(int propertyId, Point menuPosition)
     {
@@ -228,204 +152,6 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         }
     }
 
-    protected void ShowQueryString()
-    {
-        RgfDialogParameters parameters = new()
-        {
-            Title = "QueryString",
-            ShowCloseButton = true,
-            Resizable = true,
-            Width = "800px",
-            Height = "600px",
-            ContentTemplate = (builder) =>
-            {
-                int sequence = 0;
-                builder.OpenElement(sequence++, "textarea");
-                builder.AddAttribute(sequence++, "type", "text");
-                builder.AddAttribute(sequence++, "style", "width:100%;height:100%;");
-                builder.AddContent(sequence++, Manager.ListHandler.QueryString ?? "?");
-                builder.CloseElement();
-            }
-        };
-        _dynamicDialog.Dialog(parameters);
-    }
-
-    protected void QuickWatch()
-    {
-        _logger.LogDebug("RgfGridComponent.QuickWatch");
-        var entityKey = SelectedItems.FirstOrDefault().Value;
-        if (entityKey?.IsEmpty == false)
-        {
-            var param = new RgfEntityParameters("QuickWatch", Manager.SessionParams);
-            param.FormParameters.FormViewKey.EntityKey = entityKey;
-            RgfDialogParameters dialogParameters = new()
-            {
-                IsModal = false,
-                ShowCloseButton = true,
-                Resizable = true,
-                UniqueName = "quickwatch",
-                ContentTemplate = RgfEntityComponent.Create(param, _logger),
-            };
-            _dynamicDialog.Dialog(dialogParameters);
-        }
-    }
-
-    protected async Task ExportCsvAsync()
-    {
-        CultureInfo culture = _recroSec.UserCultureInfo();
-        var listSeparator = culture.TextInfo.ListSeparator;
-        var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
-        var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
-        await Manager.ToastManager.RaiseEventAsync(toast, this);
-        var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
-        if (result != null)
-        {
-            await Manager.BroadcastMessages(result.Messages, this);
-            if (result.Result?.Results != null)
-            {
-                var stream = await Manager.GetResourceAsync<Stream>("export.csv", new Dictionary<string, string>() {
-                    { "sessionId", Manager.SessionParams.SessionId },
-                    { "id", result.Result.Results.ToString()! }
-                });
-                if (stream != null)
-                {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
-                    using var streamRef = new DotNetStreamReference(stream);
-                    await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.Title}.csv", streamRef);
-                    return;
-                }
-            }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
-        }
-    }
-
-    protected void RecroTrack()
-    {
-        _logger.LogDebug("RgfGridComponent.RecroTrack");
-        var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
-        var entityKey = SelectedItems.FirstOrDefault().Value;
-        if (entityKey?.IsEmpty == false)
-        {
-            param.FormParameters.FormViewKey.EntityKey = entityKey;
-        }
-        RgfDialogParameters dialogParameters = new()
-        {
-            IsModal = false,
-            ShowCloseButton = true,
-            Resizable = true,
-            UniqueName = "recrotrack",
-            ContentTemplate = RgfEntityComponent.Create(param, _logger),
-        };
-        _dynamicDialog.Dialog(dialogParameters);
-    }
-
-    public RenderFragment CreateColumnSettings()
-    {
-        if (GridParameters.ColumnSettingsTemplate != null)
-        {
-            return GridParameters.ColumnSettingsTemplate(this);
-        }
-        return ColumnSettingsTemplate(this);
-    }
-
-    public RenderFragment CreateGridColumn(RgfProperty propDesc, RgfDynamicDictionary rowData)
-    {
-        var param = new RgfGridColumnParameters(this, propDesc, rowData);
-        if (GridParameters.ColumnTemplate != null)
-        {
-            return GridParameters.ColumnTemplate(param);
-        }
-        return ColumnTemplate != null ? ColumnTemplate(param) : DefaultColumnTemplate(param);
-    }
-
-    private void CreateAttributes(RgfEntity entityDesc, RgfDynamicDictionary rowData)
-    {
-        var rgparams = rowData.Get<Dictionary<string, object>>("__rgparams");
-        if (rgparams?.TryGetValue("Options", out var op) == true && op is Dictionary<string, object> options)
-        {
-            _logger.LogDebug("CreateAttributes");
-            var attributes = rowData.GetOrNew<RgfDynamicDictionary>("__attributes");
-            foreach (var option in options.Where(o => o.Value != null))
-            {
-                if (option.Value is Dictionary<string, object> propOptions)
-                {
-                    foreach (var propOption in propOptions.Where(o => o.Value != null))
-                    {
-                        var prop = entityDesc.Properties.FirstOrDefault(e => e.Alias.Equals(option.Key, StringComparison.OrdinalIgnoreCase) || e.ClientName.Equals(option.Key, StringComparison.OrdinalIgnoreCase));
-                        if (prop != null)
-                        {
-                            var propAttributes = attributes.GetOrNew<RgfDynamicDictionary>(prop.Alias);
-                            if (propOption.Key.Equals("class", StringComparison.OrdinalIgnoreCase) || propOption.Key.Equals("RGOD_CssClass", StringComparison.OrdinalIgnoreCase))
-                            {
-                                propAttributes.Set<string>("class", (old) => string.IsNullOrEmpty(old) ? propOption.Value.ToString()! : $"{old.Trim()} {propOption.Value}");
-                            }
-                            else if (propOption.Key.Equals("style", StringComparison.OrdinalIgnoreCase) || propOption.Key.Equals("RGOD_Style", StringComparison.OrdinalIgnoreCase))
-                            {
-                                propAttributes.Set<string>("style", (old) => string.IsNullOrEmpty(old) ? propOption.Value.ToString()! : $"{old.Trim(';')};{propOption.Value}");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (option.Key.Equals("class", StringComparison.OrdinalIgnoreCase) || option.Key.Equals("RGOD_CssClass", StringComparison.OrdinalIgnoreCase))
-                    {
-                        attributes.Set<string>("class", (old) => string.IsNullOrEmpty(old) ? option.Value.ToString()! : $"{old.Trim()} {option.Value}");
-                    }
-                    else if (option.Key.Equals("style", StringComparison.OrdinalIgnoreCase) || option.Key.Equals("RGOD_Style", StringComparison.OrdinalIgnoreCase))
-                    {
-                        attributes.Set<string>("style", (old) => string.IsNullOrEmpty(old) ? option.Value.ToString()! : $"{old.Trim(';')};{option.Value}");
-                    }
-                }
-            }
-        }
-    }
-
-    public RgfDynamicData? GetColumnData(int absoluteRowIndex, string alias)
-    {
-        var rowData = Manager.ListHandler.GetRowData(absoluteRowIndex);
-        return rowData?.GetItemData(alias);
-    }
-
-    public RgfDynamicData? GetColumnData(int absoluteRowIndex, int propertyId)
-    {
-        var alias = Manager.EntityDesc.Properties.FirstOrDefault(e => e.Id == propertyId)?.Alias;
-        if (string.IsNullOrEmpty(alias))
-        {
-            return null;
-        }
-        return GetColumnData(absoluteRowIndex, alias);
-    }
-
-    protected virtual async Task OnChangedGridDataAsync(ObservablePropertyEventArgs<List<RgfDynamicDictionary>> args)
-    {
-        try
-        {
-            _logger.LogDebug("OnChangeGridData");
-            var entityDesc = Manager.EntityDesc;
-            var rgo = new string[] { "RGO_CssClass", "RGO_Style", "RGO_JSRowClass", "RGO_JSRowStyle" };
-            var prop4RowStyles = entityDesc.Properties.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
-            var prop4ColStyles = entityDesc.SortedVisibleColumns.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
-            foreach (var rowData in args.NewData)
-            {
-                CreateAttributes(entityDesc, rowData);
-                await RgfGridColumnComponent.InitStylesAsync(_jsRuntime, entityDesc, rowData, prop4RowStyles, prop4ColStyles);
-                var eventArgs = new RgfListEventArgs(RgfListEventKind.CreateRowData, this, rowData);
-                await GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
-            }
-            GridDataSource.Value = args.NewData;
-
-            if (SelectedItems.Any() && GridParameters.EnableMultiRowSelection != true)
-            {
-                await Manager.SelectedItems.SetValueAsync(new());
-            }
-        }
-        finally
-        {
-            _isProcessing = false;
-        }
-    }
-
     public virtual async Task RowSelectHandlerAsync(RgfDynamicDictionary rowData)
     {
         var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
@@ -466,16 +192,5 @@ public partial class RgfGridComponent : ComponentBase, IDisposable
         SelectedItems = new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
         var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(Manager.SelectParam != null ? RgfToolbarEventKind.Select : RgfToolbarEventKind.Read));
         return EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
-    }
-
-    public void Dispose()
-    {
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync);
-
-        if (Disposables != null)
-        {
-            Disposables.ForEach(disposable => disposable.Dispose());
-            Disposables = null!;
-        }
     }
 }

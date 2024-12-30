@@ -1,0 +1,14 @@
+﻿@TreeTemplate(this)
+@CreateColumnSettings()
+
+<RgfDynamicDialog @ref="_dynamicDialog" />
+
+@inherits RgfDataComponentBase
+@code {
+
+    [Parameter, EditorRequired]
+    public ComponentBase TreeComponent { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<RgfTreeComponent> TreeTemplate { get; set; } = null!;
+}

@@ -11,22 +11,12 @@
 
 <RgfDynamicDialog @ref="_dynamicDialog" />
 
+@inherits RgfDataComponentBase
 @code {
-
-    [Parameter, EditorRequired]
-    public RgfEntityParameters EntityParameters { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public ComponentBase GridComponent { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public RenderFragment<RgfGridComponent> GridTemplate { get; set; } = null!;
-
-    [Parameter, EditorRequired]
-    public RenderFragment<RgfGridComponent> ColumnSettingsTemplate { get; set; } = null!;
-
-    [Parameter]
-    public RenderFragment<RgfGridColumnParameters>? ColumnTemplate { get; set; }
-
-    public RenderFragment<RgfGridColumnParameters> DefaultColumnTemplate => (param) => @<RgfGridColumnComponent GridColumnParameters="@param" />;
 }

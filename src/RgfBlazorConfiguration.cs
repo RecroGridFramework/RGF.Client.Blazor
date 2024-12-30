@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Client.Blazor.Handlers;
 using Recrovit.RecroGridFramework.Client.Services;
@@ -49,11 +50,17 @@ public class RgfBlazorConfiguration
         Chart = 3,
     }
 
-    public static readonly string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
+    public const string JsBlazorNamespace = "Recrovit.RGF.Blazor.Client";
 
-    public static readonly string JQueryUiVer = "1.14.1";
+    public const string JQueryUiVer = "1.14.1";
 
     public static ValueTask<int> ChkJQueryUiVer(IJSRuntime jsRuntime) => jsRuntime.InvokeAsync<int>("Recrovit.LPUtils.CompareJQueryUIVersion", JQueryUiVer);
+
+    public static string Version => _version.Value;
+
+    private static readonly Lazy<string> _version = new Lazy<string>(() => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version);
+
+    internal static readonly Version MinimumRgfCoreVersion = new Version(8, 13, 0);//RGF.Core MinVersion
 }
 
 public static class RgfBlazorConfigurationExtension
@@ -78,6 +85,17 @@ public static class RgfBlazorConfigurationExtension
                 options.HttpMessageHandlerBuilderActions.Add(b => b.AdditionalHandlers.Add((DelegatingHandler)b.Services.GetRequiredService(authorizationMessageHandlerType)));
             });
         }
+
+        if (RgfClientConfiguration.ClientVersions.TryAdd(RgfHeaderKeys.RgfClientBlazorVersion, RgfBlazorConfiguration.Version))
+        {
+            RgfClientConfiguration.ClientVersions.Remove(RgfHeaderKeys.RgfClientVersion);
+        }
+
+        if (RgfClientConfiguration.MinimumRgfCoreVersion < RgfBlazorConfiguration.MinimumRgfCoreVersion)
+        {
+            RgfClientConfiguration.MinimumRgfCoreVersion = RgfBlazorConfiguration.MinimumRgfCoreVersion;
+        }
+
         return services;
     }
 
@@ -91,7 +109,7 @@ public static class RgfBlazorConfigurationExtension
             await LoadResourcesAsync(serviceProvider);
         }
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
-        logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", FileVersion);
+        logger?.LogInformation("RecroGrid Framework Blazor v{version} initialized.", RgfBlazorConfiguration.Version);
     }
 
     public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
@@ -130,13 +148,10 @@ public static class RgfBlazorConfigurationExtension
         }
 
         await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-dynamic-wrapper-comp=\"\">",
-            $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css?v={FileVersion}", BlazorCssLib);
+            $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}", BlazorCssLib);
     }
 
     private static readonly string BlazorCssLib = "rgf-client-blazor-lib";
-
-    public static string FileVersion => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version;
-
 
     public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }

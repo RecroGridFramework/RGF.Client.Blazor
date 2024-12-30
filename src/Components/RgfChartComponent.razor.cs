@@ -84,7 +84,9 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             PropertyFormType.StaticText
         };
         AllowedProperties = Manager.EntityDesc.Properties
-            .Where(p => p.Readable && !p.IsDynamic && (validFormTypes.Contains(p.FormType) || p.Options?.GetBoolValue("RGO_AggregationRequired") == true))
+            .Where(p => p.Readable && !p.IsDynamic &&
+                p.Options?.GetBoolValue("RGO_AggregationExclude") != true &&
+                (validFormTypes.Contains(p.FormType) || p.Options?.GetBoolValue("RGO_AggregationRequired") == true))
             .OrderBy(e => e.ColTitle).ToArray();
 
         ChartSettings.AggregationSettings.Columns = new List<RgfAggregationColumn> { new() { Id = 0, Aggregate = "Count" } };
@@ -103,9 +105,9 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         ChartParameters.DialogParameters.ContentTemplate = ContentTemplate(this);
         ChartParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
         ChartParameters.DialogParameters.Resizable ??= true;
-        ChartParameters.DialogParameters.Height = "700px";
-        ChartParameters.DialogParameters.Width = "1020px";
-        ChartParameters.DialogParameters.MinWidth = "920px";
+        ChartParameters.DialogParameters.Height ??= "700px";
+        ChartParameters.DialogParameters.Width ??= "1020px";
+        ChartParameters.DialogParameters.MinWidth ??= "920px";
 
         if (EntityParameters.DialogTemplate != null)
         {
