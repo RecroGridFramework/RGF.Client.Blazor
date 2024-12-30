@@ -38,6 +38,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public FormViewData FormData { get; private set; } = null!;
 
+    public RgfPropertyTooltips PropertyTooltips { get; private set; } = new();
+
     public RgfFormValidationComponent? FormValidation { get; private set; }
 
     public FormEditMode FormEditMode { get; set; }
@@ -75,6 +77,12 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         //FormParameters.DialogParameters.Width ??= "80%";
         FormParameters.DialogParameters.Resizable ??= true;
         FormParameters.DialogParameters.NoHeader = FormParameters.DialogParameters.HeaderTemplate == null;
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        PropertyTooltips = await Manager.GetPropertyTooltipsAsync();
     }
 
     protected override async Task OnParametersSetAsync()
