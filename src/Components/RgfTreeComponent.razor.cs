@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -18,6 +19,10 @@ public partial class RgfTreeComponent : RgfDataComponentBase
     private Dictionary<int, RgfTreeNodeParameters> _nodeCache = [];
 
     private List<RgfProperty> GridTypeProperties => _gridProperties ??= Manager.EntityDesc.Properties.Where(e => e.FormType == PropertyFormType.RecroGrid && e.FormTab > 0).OrderBy(e => $"{e.FormTab}/{e.FormGroup}/{e.FormPos}").ToList();
+
+    private int? _treeViewColumnCount;
+
+    public int TreeViewColumnCount() => _treeViewColumnCount ??= Manager.EntityDesc.Options.GetIntValue("RGO_TreeViewColumnCount", 1);
 
     protected override void OnInitialized()
     {
