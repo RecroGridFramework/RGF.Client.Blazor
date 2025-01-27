@@ -66,7 +66,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
             var jquiVer = await RgfBlazorConfiguration.ChkJQueryUiVer(_jsRuntime);
             if (jquiVer < 0)
             {
-                await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jqueryui/jquery-ui.min.js");
+                await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/lib/jqueryui/jquery-ui.min.js");
             }
 
             var api = _serviceProvider.GetRequiredService<IRgfApiService>();
@@ -88,7 +88,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
                 }
             }
 
-            await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
+            await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/scripts/" +
 #if DEBUG
                 "recrovit-rgf-blazor-legacy.js"
 #else
@@ -96,7 +96,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
 #endif
                 );
         }
-        await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jqueryui/themes/base/jquery-ui.min.css", false, null, null, "rgf-legacy");
+        await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/lib/jqueryui/themes/base/jquery-ui.min.css", false, null, null, "rgf-legacy");
         foreach (var item in StylesheetsReferences)
         {
             await _jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + item, false, null, null, "rgf-legacy");

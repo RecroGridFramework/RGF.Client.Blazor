@@ -120,7 +120,7 @@ public static class RgfBlazorConfigurationExtension
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery != 'undefined'");
         if (!jquery)
         {
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/lib/jquery/jquery.min.js");
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/lib/jquery/jquery.min.js");
         }
 
         if (!SriptReferences.Any())
@@ -136,7 +136,7 @@ public static class RgfBlazorConfigurationExtension
                 }
                 await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
             }
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}_content/{libName}/scripts/" +
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/scripts/" +
 #if DEBUG
                 "recrovit-rgf-blazor.js"
 #else
@@ -148,7 +148,7 @@ public static class RgfBlazorConfigurationExtension
         }
 
         await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-dynamic-wrapper-comp=\"\">",
-            $"{RgfClientConfiguration.AppRootPath}_content/{libName}/{libName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}", BlazorCssLib);
+            $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/{libName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}", BlazorCssLib);
     }
 
     private static readonly string BlazorCssLib = "rgf-client-blazor-lib";
