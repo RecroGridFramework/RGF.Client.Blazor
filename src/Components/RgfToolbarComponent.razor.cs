@@ -188,16 +188,16 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
             if (result == null)
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.Remove(), this);
                 await Manager.NotificationManager.RaiseEventAsync(new RgfUserMessageEventArgs(_recroDict, UserMessageType.Information, _recroDict.GetRgfUiString("MenuNotImplemented")), this);
             }
             else if (result.Success == false)
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Error"), RgfToastType.Error), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.Recreate(_recroDict.GetRgfUiString("Error"), RgfToastType.Error), this);
             }
             else
             {
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.RecreateAsSuccess(_recroDict.GetRgfUiString("Processed")), this);
                 if (result.Result.RefreshGrid)
                 {
                     await Manager.ListHandler.RefreshDataAsync();
@@ -300,7 +300,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             if (res)
             {
                 GridSetting.SettingsName = "";//clear text input
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.Recreate(_recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                 StateHasChanged();
                 return true;
             }

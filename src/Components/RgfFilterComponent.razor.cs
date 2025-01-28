@@ -183,7 +183,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         await Manager.ToastManager.RaiseEventAsync(toast, this);
         if (await FilterHandler.SaveFilterSettingsAsync(FilterSettings))
         {
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+            await Manager.ToastManager.RaiseEventAsync(toast.RecreateAsSuccess(_recroDict.GetRgfUiString("Processed")), this);
             StateHasChanged();
         }
     }
@@ -199,7 +199,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
             if (await FilterHandler.DeleteFilterSettingsAsync(FilterSettings.FilterSettingsId.Value))
             {
                 FilterSettings = new() { SettingsName = "", FilterSettingsId = null };
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.Recreate(_recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                 StateHasChanged();
                 return true;
             }

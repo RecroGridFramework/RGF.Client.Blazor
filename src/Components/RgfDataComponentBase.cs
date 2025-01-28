@@ -175,13 +175,13 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                    await Manager.ToastManager.RaiseEventAsync(toast.RecreateAsSuccess(_recroDict.GetRgfUiString("Processed")), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.MenuTitle}.csv", streamRef);
                     return;
                 }
             }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
+            await Manager.ToastManager.RaiseEventAsync(toast.Remove(), this);
         }
     }
 
