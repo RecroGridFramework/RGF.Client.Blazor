@@ -8,6 +8,7 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using Recrovit.RecroGridFramework.Client.Models;
 using System.Text.Json;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -185,7 +186,12 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         {
             var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, menu.Title, delay: 0);
             await Manager.ToastManager.RaiseEventAsync(toast, this);
-            var result = await Manager.ListHandler.CallCustomFunctionAsync(menu.Command, true, null, entityKey);
+            var result = await Manager.ListHandler.CallCustomFunctionAsync(new RgfCustomFunctionContext()
+            {
+                FunctionName = menu.Command,
+                RequireQueryParams = true,
+                EntityKey = entityKey
+            });
             if (result == null)
             {
                 await Manager.ToastManager.RaiseEventAsync(toast.Remove(), this);

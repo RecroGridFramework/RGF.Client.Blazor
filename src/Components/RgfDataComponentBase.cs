@@ -8,6 +8,7 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using Recrovit.RecroGridFramework.Client.Models;
 using System.Globalization;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -163,7 +164,12 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
         var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
-        var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
+        var result = await Manager.ListHandler.CallCustomFunctionAsync(new RgfCustomFunctionContext()
+        {
+            FunctionName = Menu.ExportCsv,
+            RequireQueryParams = true,
+            CustomParams = customParams
+        });
         if (result != null)
         {
             await Manager.BroadcastMessages(result.Messages, this);
