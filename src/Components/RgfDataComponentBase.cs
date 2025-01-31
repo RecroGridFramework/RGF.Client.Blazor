@@ -8,6 +8,7 @@ using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
+using Recrovit.RecroGridFramework.Client.Models;
 using System.Globalization;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
@@ -78,9 +79,10 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+
         var eventArg = new RgfEventArgs<RgfListEventArgs>(this, RgfListEventArgs.CreateAfterRenderEvent(this, firstRender));
         await EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-        _logger.LogDebug("OnAfterRender");
     }
 
     protected async Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
@@ -163,7 +165,12 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         var customParams = new Dictionary<string, object> { { "ListSeparator", listSeparator } };
         var toast = RgfToastEventArgs.CreateActionEvent(_recroDict.GetRgfUiString("Request"), Manager.EntityDesc.MenuTitle, "Export", delay: 0);
         await Manager.ToastManager.RaiseEventAsync(toast, this);
-        var result = await Manager.ListHandler.CallCustomFunctionAsync(Menu.ExportCsv, true, customParams);
+        var result = await Manager.ListHandler.CallCustomFunctionAsync(new RgfCustomFunctionContext()
+        {
+            FunctionName = Menu.ExportCsv,
+            RequireQueryParams = true,
+            CustomParams = customParams
+        });
         if (result != null)
         {
             await Manager.BroadcastMessages(result.Messages, this);
@@ -175,13 +182,13 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
                 });
                 if (stream != null)
                 {
-                    await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Success), this);
+                    await Manager.ToastManager.RaiseEventAsync(toast.RecreateAsSuccess(_recroDict.GetRgfUiString("Processed")), this);
                     using var streamRef = new DotNetStreamReference(stream);
                     await _jsRuntime.InvokeVoidAsync(RgfBlazorConfiguration.JsBlazorNamespace + ".downloadFileFromStream", $"{Manager.EntityDesc.MenuTitle}.csv", streamRef);
                     return;
                 }
             }
-            await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RemoveToast(toast), this);
+            await Manager.ToastManager.RaiseEventAsync(toast.Remove(), this);
         }
     }
 

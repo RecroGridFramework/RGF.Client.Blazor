@@ -42,6 +42,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public RgfFormValidationComponent? FormValidation { get; private set; }
 
+    internal List<RgfFormItemComponent> FormItemComponents { get; } = [];
+
     public FormEditMode FormEditMode { get; set; }
 
     public List<IDisposable> Disposables { get; private set; } = [];
@@ -102,7 +104,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 }
                 else
                 {
-                    _formDialog = RgfDynamicDialog.Create(FormParameters.DialogParameters, _logger);
+                    _formDialog = RgfDynamicDialog.Create(FormParameters.DialogParameters, _logger, OnDialogComponentInitialized);
                 }
             }
         }
@@ -112,9 +114,30 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+
         var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, RgfFormEventArgs.CreateAfterRenderEvent(this, firstRender));
         await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-        _logger.LogDebug("OnAfterRender");
+    }
+
+    private Func<RgfComponentWrapper, Task> OnDialogComponentInitialized => async (wrapper) =>
+    {
+        wrapper.EventDispatcher.Subscribe(RgfWrapperEventKind.Rendered, OnRendered);
+        await Task.CompletedTask;
+    };
+
+    private async Task OnRendered(IRgfEventArgs<RgfWrapperEventArgs<RgfComponentWrapper>> arg)
+    {
+        arg.Args.WrapperComponent.EventDispatcher.Unsubscribe(RgfWrapperEventKind.Rendered, OnRendered);
+        var children = FormItemComponents.Select(e => e.FirstRenderCompletionTask).ToArray();
+        _ = Task.WhenAll(children).ContinueWith(async (task) =>
+        {
+            _logger.LogDebug("Form items have been successfully rendered.");
+
+            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormItemsFirstRenderCompleted, this));
+            await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
+        });
+        await Task.CompletedTask;
     }
 
     public Task FirstFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : 0);
@@ -125,47 +148,60 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public Task PrevFormItemAsync() => SetFormItemAsync(FormParameters.FormViewKey.RowIndex == -1 ? -1 : FormParameters.FormViewKey.RowIndex - 1);
 
+    public async Task ApplyAndNextNew()
+    {
+        var success = await FormSaveStartAsync(true);
+        if(success)
+        {
+            var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Add));
+            await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
+        }
+    }
+
     public bool IsFormDataBeingSet { get; private set; }
 
     private async Task SetFormItemAsync(int rowIndex, bool ignoreChanges = false)
     {
-        if (rowIndex >= 0)
+        if (rowIndex < 0)
         {
-            var basePermissions = Manager.ListHandler.CRUD;
-            if (ignoreChanges == false &&
-                (basePermissions.Create == false && FormEditMode == FormEditMode.Create || basePermissions.Update == false && FormEditMode == FormEditMode.Update))
+            return;
+        }
+
+        var basePermissions = Manager.ListHandler.CRUD;
+        if (ignoreChanges == false &&
+            (basePermissions.Create == false && FormEditMode == FormEditMode.Create || basePermissions.Update == false && FormEditMode == FormEditMode.Update))
+        {
+            ignoreChanges = true;
+        }
+        if (ignoreChanges || !CurrentEditContext.IsModified())
+        {
+            if (IsFormDataBeingSet == false)
             {
-                ignoreChanges = true;
-            }
-            if (ignoreChanges || !CurrentEditContext.IsModified())
-            {
-                if (IsFormDataBeingSet == false)
+                try
                 {
-                    try
+                    IsFormDataBeingSet = true;
+                    var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
+                    if (rowData != null)
                     {
-                        IsFormDataBeingSet = true;
-                        var rowData = await Manager.ListHandler.EnsureVisibleAsync(rowIndex);
-                        if (rowData != null)
-                        {
-                            var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
-                            await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
-                            var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, rowData));
-                            await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
-                        }
-                    }
-                    finally
-                    {
-                        IsFormDataBeingSet = false;
+                        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(rowData);
+                        await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
+                        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, rowData));
+                        await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
                     }
                 }
+                finally
+                {
+                    IsFormDataBeingSet = false;
+                }
             }
-            else
-            {
-                _dynamicDialog.Choice(
-                    _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
-                    _recroDict.GetRgfUiString("UnsavedConfirm"),
-                    [
-                        new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) =>
+        }
+        else
+        {
+            _dynamicDialog.Choice(
+                _recroDict.GetRgfUiString("UnsavedConfirmTitle"),
+                _recroDict.GetRgfUiString("UnsavedConfirm"),
+                [
+                    new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) =>
                     {
                         var success = await FormSaveStartAsync(false);
                         if(success)
@@ -175,9 +211,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                     }),
                     new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => SetFormItemAsync(rowIndex, true)),
                     new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), isPrimary:true)
-                    ],
-                    DialogType.Warning);
-            }
+                ],
+                DialogType.Warning);
         }
     }
 
@@ -266,6 +301,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public void Close()
     {
+        OnGridItemSelected(new CancelEventArgs(true));//Cleanup select dialog if any
         if (FormParameters.DialogParameters.Destroy != null)
         {
             FormParameters.DialogParameters.Destroy();

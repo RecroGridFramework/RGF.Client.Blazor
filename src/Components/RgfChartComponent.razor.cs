@@ -435,7 +435,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
                 ChartSettingList = ChartSettingList.Where(e => e.ChartSettingsId != ChartSettings.ChartSettingsId).ToList();
                 ChartSettings.ChartSettingsId = null;
                 ChartSettings.SettingsName = ""; //clear text input
-                await Manager.ToastManager.RaiseEventAsync(RgfToastEventArgs.RecreateToastWithStatus(toast, _recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
+                await Manager.ToastManager.RaiseEventAsync(toast.Recreate(_recroDict.GetRgfUiString("Processed"), RgfToastType.Info), this);
                 StateHasChanged();
                 return true;
             }
