@@ -1,0 +1,27 @@
+﻿@if (ComponentType != null)
+{
+    var propertiesDictionary = GetPropertiesDictionary(ComponentParameters);
+    <DynamicComponent Type="ComponentType" Parameters="propertiesDictionary" />
+}
+else if (ChildContent != null)
+{
+    @ChildContent
+}
+
+@code {
+
+    [Parameter]
+    public Type? ComponentType { get; set; }
+
+    [Parameter]
+    public object? ComponentParameters { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public Func<RgfComponentWrapper, Task>? OnComponentInitialized { get; set; }
+
+    internal static RenderFragment Create(Type componentType, object componentParameters)
+        => @<RgfComponentWrapper ComponentType="@componentType" ComponentParameters="@componentParameters" />;
+}

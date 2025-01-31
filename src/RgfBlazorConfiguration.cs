@@ -60,7 +60,7 @@ public class RgfBlazorConfiguration
 
     private static readonly Lazy<string> _version = new Lazy<string>(() => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version);
 
-    internal static readonly Version MinimumRgfCoreVersion = new Version(8, 13, 0);//RGF.Core MinVersion
+    internal static readonly Version MinimumRgfCoreVersion = new Version(8, 14, 0);//RGF.Core MinVersion
 }
 
 public static class RgfBlazorConfigurationExtension
@@ -147,7 +147,7 @@ public static class RgfBlazorConfigurationExtension
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
         }
 
-        await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-dynamic-wrapper-comp=\"\">",
+        await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-wrapper-comp=\"\">",
             $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/{libName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}", BlazorCssLib);
     }
 

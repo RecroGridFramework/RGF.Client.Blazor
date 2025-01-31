@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Components.Forms;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
-using Recrovit.RecroGridFramework.Client.Handlers;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
-public partial class RgfFormItemComponent : ComponentBase
+public partial class RgfFormItemComponent : ComponentBase, IDisposable
 {
-    public RgfFormParameters FormParameters => FormItemParameters.BaseFormComponent.FormParameters;
+    public RgfFormParameters FormParameters => BaseFormComponent.FormParameters;
 
     public string ErrorCssClass => FormParameters.ErrorCssClass ?? "";
 
@@ -24,19 +23,34 @@ public partial class RgfFormItemComponent : ComponentBase
         }
     }
 
-    private IRgManager Manager => FormItemParameters.BaseFormComponent.Manager;
+    private RgfFormComponent BaseFormComponent => FormItemParameters.BaseFormComponent;
 
     public RenderFragment? ItemValidationMessage { get; private set; }
 
     private RgfForm.Property Property => FormItemParameters.Property;
 
+    private TaskCompletionSource<bool> _firstRenderCompletion = new();
+
+    public Task FirstRenderCompletionTask => _firstRenderCompletion.Task;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
+        BaseFormComponent.FormItemComponents.Add(this);
+
         CurrentEditContext.OnValidationStateChanged += (sender, args) => ItemValidationMessage = this.CreateValidationMessage(ErrorCssClass);
         //CurrentEditContext.OnValidationRequested += OnValidation;
-        FormItemParameters.ItemData.OnAfterChange += (args) => { FormItemParameters.BaseFormComponent.FormValidation?.NotifyFieldChanged(FormItemParameters); };
+        FormItemParameters.ItemData.OnAfterChange += (args) => { BaseFormComponent.FormValidation?.NotifyFieldChanged(FormItemParameters); };
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _firstRenderCompletion.SetResult(true);
+        }
+        return base.OnAfterRenderAsync(firstRender);
     }
 
     private void OnValidation(object? sender, ValidationRequestedEventArgs args)
@@ -46,14 +60,14 @@ public partial class RgfFormItemComponent : ComponentBase
 
     public Task FindEntityAsync(string filter, bool formOnly = false)
     {
-        var eventArgs = new RgfFormEventArgs(formOnly ? RgfFormEventKind.EntityDisplay : RgfFormEventKind.EntitySearch, FormItemParameters.BaseFormComponent, selectParam: this.CreateSelectParam(filter));
+        var eventArgs = new RgfFormEventArgs(formOnly ? RgfFormEventKind.EntityDisplay : RgfFormEventKind.EntitySearch, BaseFormComponent, selectParam: this.CreateSelectParam(filter));
         return FormParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfFormEventArgs>(this, eventArgs));
     }
 
     public RenderFragment? CreateValidationMessage(string? cssClass = null)
     {
         RenderFragment? validationMessage = null;
-        var messages = FormItemParameters.BaseFormComponent.CurrentEditContext.GetValidationMessages(FormItemParameters.FieldId).ToArray();
+        var messages = BaseFormComponent.CurrentEditContext.GetValidationMessages(FormItemParameters.FieldId).ToArray();
         if (messages.Any())
         {
             validationMessage = (builder) =>
@@ -76,7 +90,7 @@ public partial class RgfFormItemComponent : ComponentBase
     public RgfSelectParam CreateSelectParam(string filter)
     {
         RgfEntityKey current = new() { Keys = new() };
-        var formData = FormItemParameters.BaseFormComponent.FormData;
+        var formData = BaseFormComponent.FormData;
         foreach (var item in Property.ForeignEntity.EntityKeys)
         {
             var clientName = $"rg-col-{item.Key}";
@@ -92,5 +106,10 @@ public partial class RgfFormItemComponent : ComponentBase
             Filter = new() { Keys = new RgfDynamicDictionary() { { $"rg-col-{Property.Id}", filter } } }
         };
         return selectParam;
+    }
+
+    public void Dispose()
+    {
+        BaseFormComponent.FormItemComponents.Remove(this);
     }
 }

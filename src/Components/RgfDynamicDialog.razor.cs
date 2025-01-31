@@ -29,7 +29,7 @@ public partial class RgfDynamicDialog : ComponentBase
     [Inject]
     private IRecroDictService RecroDict { get; set; } = null!;
 
-    public static RenderFragment Create(RgfDialogParameters parameters, ILogger? logger = null)
+    public static RenderFragment Create(RgfDialogParameters parameters, ILogger? logger = null, Func<RgfComponentWrapper, Task>? onComponentInitialized = null)
     {
         Type type = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Dialog);
         logger?.LogDebug("RgfDynamicDialog.Create");
@@ -38,8 +38,15 @@ public partial class RgfDynamicDialog : ComponentBase
         {
             logger?.LogDebug("RgfDynamicDialog.Build:{build}", build++);
             int sequence = 0;
-            builder.OpenComponent(sequence++, type);
-            builder.AddAttribute(sequence++, "DialogParameters", parameters);
+            builder.OpenComponent<RgfComponentWrapper>(sequence++);
+            builder.AddAttribute(sequence++, nameof(RgfComponentWrapper.OnComponentInitialized), onComponentInitialized);
+            builder.AddAttribute(sequence++, nameof(RgfComponentWrapper.ChildContent), (RenderFragment)(childBuilder =>
+            {
+                int childSequence = 0;
+                childBuilder.OpenComponent(childSequence++, type);
+                childBuilder.AddAttribute(childSequence++, "DialogParameters", parameters);
+                childBuilder.CloseComponent();
+            }));
             builder.CloseComponent();
         };
     }

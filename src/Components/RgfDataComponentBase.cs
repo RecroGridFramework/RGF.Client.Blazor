@@ -79,9 +79,10 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+
         var eventArg = new RgfEventArgs<RgfListEventArgs>(this, RgfListEventArgs.CreateAfterRenderEvent(this, firstRender));
         await EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-        _logger.LogDebug("OnAfterRender");
     }
 
     protected async Task OnMenuCommandAsync(IRgfEventArgs<RgfMenuEventArgs> arg)
