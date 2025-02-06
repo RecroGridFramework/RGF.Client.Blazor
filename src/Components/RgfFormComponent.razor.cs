@@ -38,6 +38,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public FormViewData FormData { get; private set; } = null!;
 
+    public IEnumerable<RgfForm.Property> FormProperties => FormData.FormTabs.SelectMany(tab => tab.Groups.SelectMany(group => group.Properties));
+
     public RgfPropertyTooltips PropertyTooltips { get; private set; } = new();
 
     public RgfFormValidationComponent? FormValidation { get; private set; }
@@ -151,7 +153,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public async Task ApplyAndNextNew()
     {
         var success = await FormSaveStartAsync(true);
-        if(success)
+        if (success)
         {
             var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Add));
             await EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
@@ -218,6 +220,18 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public async Task<bool> ParametersSetAsync(RgfEntityKey entityKey)
     {
+        FormHandler = Manager.CreateFormHandler();
+        var res = await FormHandler.InitializeAsync(entityKey);
+        if (!res.Success)
+        {
+            return false;
+        }
+
+        if (!await InitFormDataAsync(res.Result))
+        {
+            return false;
+        }
+
         FormEditMode = entityKey.IsEmpty ? FormEditMode.Create : FormEditMode.Update;
         if (FooterTemplate != null)
         {
@@ -227,28 +241,27 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             var basePermissions = Manager.ListHandler.CRUD;
             List<ButtonParameters> buttons = new();
-            bool edit = basePermissions.Create && FormEditMode == FormEditMode.Create || basePermissions.Update && FormEditMode == FormEditMode.Update;
+            bool edit =
+                FormEditMode == FormEditMode.Update && basePermissions.Update ||
+                FormEditMode == FormEditMode.Create && basePermissions.Create;
+
             if (edit)
             {
                 buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => FormSaveStartAsync(false)) { ButtonName = "Apply" });
             }
+
             buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
             if (edit)
             {
                 buttons.Add(new("OK", (arg) => FormSaveStartAsync(true), true));
             }
+
             FormParameters.DialogParameters.PredefinedButtons = buttons;
         }
+
         var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.ParametersSet, this));
         await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-
-        FormHandler = Manager.CreateFormHandler();
-        var res = await FormHandler.InitializeAsync(entityKey);
-        if (res.Success)
-        {
-            return await InitFormDataAsync(res.Result);
-        }
-        return false;
+        return true;
     }
 
     protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessageEventArgs> args)
@@ -340,7 +353,14 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam };
             _selectEntityParameters.GridParameters.EnableMultiRowSelection = false;
             _selectEntityParameters.AutoOpenForm = arg.Args.EventKind == RgfFormEventKind.EntityDisplay;
-            _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
+            if (FormProperties.Any(e => e.Id == _selectParam.PropertyId && e.PropertyDesc.Editable && !e.Readonly && !e.Disabled))
+            {
+                _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);
+            }
+            else
+            {
+                _selectParam.ItemSelectedEvent.Subscribe((arg) => OnGridItemSelected(new CancelEventArgs(true)));
+            }
             _selectDialogParameters = new()
             {
                 Resizable = true,
@@ -389,7 +409,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", Services.ApiService.BaseAddress + FormData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
-            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormInitialized, this));
+            var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
             await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
             _logger.LogDebug("FormDataInitialized");
             return true;
