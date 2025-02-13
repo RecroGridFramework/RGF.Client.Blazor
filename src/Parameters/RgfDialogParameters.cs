@@ -8,7 +8,7 @@ public class RgfDialogParameters
 {
     public string? Title { get; set; }
 
-    public bool IsModal { get; set; } = true;
+    public bool IsInline { get; set; }
 
     public DialogType DialogType { get; set; } = DialogType.Default;
 

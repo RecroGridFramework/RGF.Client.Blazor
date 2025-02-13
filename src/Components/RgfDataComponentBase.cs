@@ -148,7 +148,6 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
             param.FormParameters.FormViewKey.EntityKey = entityKey;
             RgfDialogParameters dialogParameters = new()
             {
-                IsModal = false,
                 ShowCloseButton = true,
                 Resizable = true,
                 UniqueName = "quickwatch",
@@ -203,7 +202,6 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         }
         RgfDialogParameters dialogParameters = new()
         {
-            IsModal = false,
             ShowCloseButton = true,
             Resizable = true,
             UniqueName = "recrotrack",

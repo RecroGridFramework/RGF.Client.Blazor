@@ -51,9 +51,11 @@ public partial class RgfDynamicDialog : ComponentBase
         };
     }
 
-    private Dictionary<int, RenderFragment> _dynamicDialogs { get; set; } = new();
+    private Dictionary<int, RenderFragment> _dynamicDialogs { get; set; } = [];
 
-    private int _componentCount { get; set; } = 0;
+    public int DialogCount => _dynamicDialogs.Count;
+
+    private int _dialogKeyCounter { get; set; } = 0;
 
     public void Info(string title, string message) => Dialog(DialogType.Info, title, message);
 
@@ -98,7 +100,7 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public void Dialog(RgfDialogParameters parameters)
     {
-        var key = ++_componentCount;
+        var key = ++_dialogKeyCounter;
         parameters.OnClose = () =>
         {
             if (parameters.Destroy != null)
@@ -111,7 +113,7 @@ public partial class RgfDynamicDialog : ComponentBase
         {
             parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
         }
-        _dynamicDialogs.Add(_componentCount, Create(parameters));
+        _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
     }
 
@@ -181,7 +183,7 @@ public partial class RgfDynamicDialog : ComponentBase
                 _ => title
             };
         }
-        var key = ++_componentCount;
+        var key = ++_dialogKeyCounter;
         RgfDialogParameters parameters = new()
         {
             Title = title,
@@ -203,7 +205,7 @@ public partial class RgfDynamicDialog : ComponentBase
                 parameters.OnClose();
             };
         }
-        _dynamicDialogs.Add(_componentCount, Create(parameters));
+        _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
     }
 
