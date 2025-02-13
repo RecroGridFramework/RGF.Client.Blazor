@@ -305,10 +305,10 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
                 await EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
             }
             GridDataSource.Value = args.NewData;
-            if (EntityParameters.DisplayMode == RfgDisplayMode.Tree ||
-                SelectedItems.Any() && EntityParameters.GridParameters.EnableMultiRowSelection != true)
+            if (SelectedItems.Count > 1 && (EntityParameters.DisplayMode == RfgDisplayMode.Tree || EntityParameters.GridParameters.EnableMultiRowSelection != true))
             {
-                await Manager.SelectedItems.SetValueAsync(new());
+                var first = SelectedItems.First();
+                await Manager.SelectedItems.SetValueAsync(new() { { first.Key, first.Value } });
             }
         }
         finally
