@@ -93,7 +93,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         gridRequest.EntityKey = EntityParameters.FormParameters?.FormViewKey.EntityKey;
         gridRequest.ListParam = EntityParameters.ListParam;
         gridRequest.FilterParent = EntityParameters.FilterParent;
-        gridRequest.CustomParams = EntityParameters.CustomParams;
+        gridRequest.CustomParams = EntityParameters.CustomParameters;
 
         Manager = new RgManager(gridRequest, _serviceProvider);
         Manager.RefreshEntity += Refresh;

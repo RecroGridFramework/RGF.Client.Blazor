@@ -22,7 +22,7 @@ public class RgfEntityParameters : RgfSessionParams
 
     public IRgManager? Manager { get; internal set; }
 
-    public IRgManager? ParentManager { get; internal set; }
+    public RgfEntityParameters? ParentEntityParameters { get; internal set; }
 
     public string EntityName { get; }
 
@@ -54,7 +54,7 @@ public class RgfEntityParameters : RgfSessionParams
 
     public RgfFilterParent? FilterParent { get; set; }
 
-    public Dictionary<string, object>? CustomParams { get; set; }
+    public Dictionary<string, object>? CustomParameters { get; set; }
 
     public RgfEventDispatcher<RgfEntityEventKind, RgfEntityEventArgs> EventDispatcher { get; } = new();
 }

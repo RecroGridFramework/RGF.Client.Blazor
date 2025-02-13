@@ -75,7 +75,7 @@ public partial class RgfTreeComponent : RgfDataComponentBase
         {
             var entityParameters = new RgfEntityParameters(node.Property.BaseEntityNameVersion, Manager.SessionParams)
             {
-                ParentManager = Manager,
+                ParentEntityParameters = EntityParameters,
                 GridId = null,
                 DisplayMode = RfgDisplayMode.Tree
             };

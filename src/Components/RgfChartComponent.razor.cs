@@ -120,7 +120,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
         ChartSettingList = await Manager.GetChartSettingsListAsync();
 
-        ChartDataGridEntityParameters = new RgfEntityParameters("RGRecroChart", Manager.SessionParams) { DeferredInitialization = true, ParentManager = Manager };
+        ChartDataGridEntityParameters = new RgfEntityParameters("RGRecroChart", Manager.SessionParams) { DeferredInitialization = true, ParentEntityParameters = EntityParameters };
         ChartDataGrid = RgfEntityComponent.Create(ChartDataGridEntityParameters);
     }
 
