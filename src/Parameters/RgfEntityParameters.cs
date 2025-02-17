@@ -57,4 +57,22 @@ public class RgfEntityParameters : RgfSessionParams
     public Dictionary<string, object>? CustomParameters { get; set; }
 
     public RgfEventDispatcher<RgfEntityEventKind, RgfEntityEventArgs> EventDispatcher { get; } = new();
+
+    public void UnsubscribeFromAll(object subscriber)
+    {
+        ParentEntityParameters?.UnsubscribeFromAll(subscriber);
+
+        EventDispatcher.Unsubscribe(subscriber);
+
+        FilterParameters.DialogParameters.EventDispatcher.Unsubscribe(subscriber);
+
+        ToolbarParameters.EventDispatcher.Unsubscribe(subscriber);
+        ToolbarParameters.MenuEventDispatcher.Unsubscribe(subscriber);
+
+        GridParameters.EventDispatcher.Unsubscribe(subscriber);
+        FormParameters.EventDispatcher.Unsubscribe(subscriber);
+
+        ChartParameters.EventDispatcher.Unsubscribe(subscriber);
+        ChartParameters.DialogParameters.EventDispatcher.Unsubscribe(subscriber);
+    }
 }

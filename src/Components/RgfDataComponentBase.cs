@@ -319,8 +319,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
 
     public virtual void Dispose()
     {
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ToggleQuickFilter, OnToggleQuickFilter);
+        EntityParameters?.UnsubscribeFromAll(this);
 
         if (Disposables != null)
         {

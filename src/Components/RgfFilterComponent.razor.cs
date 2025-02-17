@@ -115,7 +115,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     {
         _logger.LogDebug("RgfFilter.Close");
         _showComponent = false;
-        FilterParameters.DialogParameters.Destroy?.Invoke();
+        FilterParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
         return true;
     }
@@ -209,6 +209,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ShowFilter, OnShowFilter);
+        EntityParameters?.UnsubscribeFromAll(this);
     }
 }

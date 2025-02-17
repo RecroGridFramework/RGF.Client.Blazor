@@ -112,6 +112,6 @@ public partial class RgfTreeComponent : RgfDataComponentBase
     {
         base.Dispose();
 
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.Refresh, OnRefresh);
+        EntityParameters?.UnsubscribeFromAll(this);
     }
 }

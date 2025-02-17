@@ -154,7 +154,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
     {
         _chartManagerInited = false;
         _showComponent = false;
-        ChartParameters.DialogParameters.Destroy?.Invoke();
+        ChartParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
         return true;
     }
@@ -377,8 +377,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe(Menu.RecroChart, OnShowChart);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.RecroChart, OnShowChart);
+        EntityParameters?.UnsubscribeFromAll(this);
     }
 
     public virtual async Task<bool> OnSetChartSettingAsync(int? chartSettingsId, string name)

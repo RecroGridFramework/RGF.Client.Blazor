@@ -315,10 +315,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public void Close()
     {
         OnGridItemSelected(new CancelEventArgs(true));//Cleanup select dialog if any
-        if (FormParameters.DialogParameters.Destroy != null)
-        {
-            FormParameters.DialogParameters.Destroy();
-        }
+        FormParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         Manager.FormViewKey.Value = null;
     }
 
@@ -372,9 +369,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             _selectEntityParameters.EventDispatcher.Subscribe(RgfEntityEventKind.Initialized, (arg) =>
             {
                 _selectDialogParameters.Title = arg.Args.Manager.EntityDesc.MenuTitle;
-                _selectDialogParameters.Refresh?.Invoke();
-            });
-            _selectDialogParameters.PredefinedButtons = new List<ButtonParameters>() { new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose()) };
+                _selectDialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Refresh, this);
+            }, this);
+            _selectDialogParameters.PredefinedButtons = [new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose())];
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
             StateHasChanged();
             arg.Handled = true;
@@ -388,10 +385,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         {
             this.ApplySelectParam(_selectParam!);
         }
-        if (_selectDialogParameters?.Destroy != null)
-        {
-            _selectDialogParameters.Destroy();
-        }
+        _selectDialogParameters?.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         FormParameters.DialogParameters.DynamicChild = null;
         _selectParam = null;
         _selectDialogParameters = null;
@@ -535,8 +529,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     public virtual void DisposeFormComponent()
     {
-        FormParameters.EventDispatcher.Unsubscribe([RgfFormEventKind.EntitySearch, RgfFormEventKind.EntityDisplay], OnFindEntityAsync);
-        FormParameters.EventDispatcher.Unsubscribe(RgfFormEventKind.FormSaveStarted, OnFormSaveStartedAsync);
+        FormParameters.EventDispatcher.Unsubscribe(this);
+
         if (Disposables != null)
         {
             Disposables.ForEach(disposable => disposable.Dispose());

@@ -103,10 +103,7 @@ public partial class RgfDynamicDialog : ComponentBase
         var key = ++_dialogKeyCounter;
         parameters.OnClose = () =>
         {
-            if (parameters.Destroy != null)
-            {
-                parameters.Destroy();
-            }
+            parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
             return Close(key);
         };
         if (parameters.PredefinedButtons == null)
