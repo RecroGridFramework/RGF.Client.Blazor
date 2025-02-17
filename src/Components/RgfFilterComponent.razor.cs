@@ -22,7 +22,6 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     [Inject]
     private IRecroSecService _recroSec { get; set; } = null!;
 
-
     public RgfFilterParameters FilterParameters { get; private set; } = default!;
 
     public RgfFilter.Condition? Condition { get; private set; }
@@ -36,10 +35,15 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
     public Dictionary<string, string> VisibleRoles => new[] { new KeyValuePair<string, string>("", "") }.Concat(_recroSec.Roles).ToDictionary(kv => kv.Key, kv => kv.Value);
 
     public void AddCondition(RgfFilter.Condition condition) { FilterHandler.AddCondition(_logger, condition.ClientId); IsFilterActive = true; }
+
     public void RemoveCondition(RgfFilter.Condition condition) { FilterHandler.RemoveCondition(condition.ClientId); IsFilterActive = true; }
+
     public void AddBracket(RgfFilter.Condition condition) { FilterHandler.AddBracket(condition.ClientId); IsFilterActive = true; }
+
     public void RemoveBracket(RgfFilter.Condition condition) { FilterHandler.RemoveBracket(condition.ClientId); IsFilterActive = true; }
+
     public bool ChangeProperty(RgfFilter.Condition condition, int newPropertyId) { IsFilterActive = true; return FilterHandler.ChangeProperty(condition, newPropertyId); }
+
     public bool ChangeQueryOperator(RgfFilter.Condition condition, RgfFilter.QueryOperator newOperator) { IsFilterActive = true; return FilterHandler.ChangeQueryOperator(_logger, condition, newOperator); }
 
     private EditContext _emptyEditContext = new(new object());
@@ -85,7 +89,8 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     private void Open()
     {
-        FilterParameters.DialogParameters.OnClose = Close; //We'll reset it in case the dialog might have overwritten it
+        FilterParameters.DialogParameters.EventDispatcher.Unsubscribe(this);//We'll reset it in case the dialog might have overwritten it
+        FilterParameters.DialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, OnDialogCloseAsync, true);
         if (EntityParameters.DialogTemplate != null)
         {
             _filterDialog = EntityParameters.DialogTemplate(FilterParameters.DialogParameters);
@@ -99,54 +104,39 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
         StateHasChanged();
     }
 
-    public void OnClose(MouseEventArgs? args = null)
-    {
-        if (FilterParameters.DialogParameters.OnClose != null)
-        {
-            FilterParameters.DialogParameters.OnClose();
-        }
-        else
-        {
-            Close();
-        }
-    }
+    private Task OnDialogCloseAsync(IRgfEventArgs<RgfDialogEventArgs> args) => CloseDialogAsync();
 
-    private bool Close()
+    private async Task CloseDialogAsync()
     {
         _logger.LogDebug("RgfFilter.Close");
         _showComponent = false;
-        FilterParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
+        await FilterParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
-        return true;
     }
 
-    public void Recreate()
-    {
-        OnClose(null);
-        _ = Task.Run(() => { Open(); });
-    }
+    public Task RecreateAsync() => CloseDialogAsync().ContinueWith(_ => Task.Run(Open), TaskContinuationOptions.OnlyOnRanToCompletion);
 
-    public virtual void OnCancel(MouseEventArgs? args = null)
+    public virtual Task OnCancel(MouseEventArgs? args = null)
     {
         FilterHandler.ResetFilter();
-        OnClose(args);
+        return CloseDialogAsync();
     }
 
     public virtual async Task OnOk(MouseEventArgs? args = null)
     {
         _logger.LogDebug("RgfFilter.OnOk");
-        _showComponent = false;
-        OnClose(args);
+        await CloseDialogAsync();
         var conditions = IsFilterActive ? FilterHandler.StoreFilter() : [];
         await Manager.ListHandler.SetFilterAsync(conditions, FilterSettings.SQLTimeout);
     }
 
-    private void HandleKeyUp(KeyboardEventArgs e)
+    private Task HandleKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            Task.Run(async () => await OnOk());
+            return OnOk();
         }
+        return Task.CompletedTask;
     }
 
     public virtual bool OnSetPredefinedFilter(int? filterSettingsId, string name)

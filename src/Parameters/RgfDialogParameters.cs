@@ -7,6 +7,11 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfDialogParameters
 {
+    public RgfDialogParameters()
+    {
+        EventDispatcher.Subscribe(RgfDialogEventKind.Close, (args) => EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this), true);
+    }
+
     public string? Title { get; set; }
 
     public bool IsInline { get; set; }
@@ -34,8 +39,6 @@ public class RgfDialogParameters
     public RenderFragment? FooterTemplate { get; set; }
 
     public RenderFragment? DynamicChild { get; set; }
-
-    public Func<bool>? OnClose { get; set; }
 
     public IEnumerable<ButtonParameters>? PredefinedButtons { get; set; }
 

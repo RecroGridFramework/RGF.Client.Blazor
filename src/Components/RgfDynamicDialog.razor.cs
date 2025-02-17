@@ -101,14 +101,10 @@ public partial class RgfDynamicDialog : ComponentBase
     public void Dialog(RgfDialogParameters parameters)
     {
         var key = ++_dialogKeyCounter;
-        parameters.OnClose = () =>
-        {
-            parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
-            return Close(key);
-        };
+        parameters.EventDispatcher.Subscribe(RgfDialogEventKind.Destroy, (args) => Destroy(key), true);
         if (parameters.PredefinedButtons == null)
         {
-            parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
+            parameters.PredefinedButtons = [new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this), isPrimary: true)];
         }
         _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
@@ -187,9 +183,10 @@ public partial class RgfDynamicDialog : ComponentBase
             DialogType = dialogType,
             ShowCloseButton = false,
             ContentTemplate = content,
-            OnClose = () => Close(key),
             PredefinedButtons = buttons
         };
+        parameters.EventDispatcher.Subscribe(RgfDialogEventKind.Destroy, (args) => Destroy(key), true);
+
         foreach (var item in buttons)
         {
             var handler = item.Callback;
@@ -199,17 +196,16 @@ public partial class RgfDynamicDialog : ComponentBase
                 {
                     await handler.Invoke(arg);
                 }
-                parameters.OnClose();
+                await parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this);
             };
         }
         _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
     }
 
-    private bool Close(int key)
+    private void Destroy(int key)
     {
         _dynamicDialogs.Remove(key);
         StateHasChanged();
-        return true;
     }
 }

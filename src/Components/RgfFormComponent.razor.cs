@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.API;
@@ -77,7 +78,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         FormParameters.DialogParameters.CssClass = $"recro-grid-base rg-details {Manager.EntityDesc.NameVersion.ToLower()}";
         FormParameters.DialogParameters.UniqueName = Manager.EntityDesc.NameVersion.ToLower();
         FormParameters.DialogParameters.ContentTemplate = FormTemplate(this);
-        FormParameters.DialogParameters.OnClose = OnClose;
+        FormParameters.DialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, OnDialogCloseAsync, true);
         //FormParameters.DialogParameters.Width ??= "80%";
         FormParameters.DialogParameters.Resizable ??= true;
         FormParameters.DialogParameters.NoHeader = FormParameters.DialogParameters.HeaderTemplate == null;
@@ -250,7 +251,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 buttons.Add(new(_recroDict.GetRgfUiString("Apply"), (arg) => FormSaveStartAsync(false)) { ButtonName = "Apply" });
             }
 
-            buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), (arg) => OnClose()));
+            buttons.Add(new(_recroDict.GetRgfUiString(edit ? "Cancel" : "Close"), OnClose));
             if (edit)
             {
                 buttons.Add(new("OK", (arg) => FormSaveStartAsync(true), true));
@@ -312,14 +313,18 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         };
     }
 
-    public void Close()
+    private Task OnDialogCloseAsync(IRgfEventArgs<RgfDialogEventArgs> args) => OnCloseAsync();
+
+    private async Task CloseDialogAsync()
     {
         OnGridItemSelected(new CancelEventArgs(true));//Cleanup select dialog if any
-        FormParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
+        await FormParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         Manager.FormViewKey.Value = null;
     }
 
-    public virtual bool OnClose()
+    private Task OnClose(MouseEventArgs? args) => FormParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this);
+
+    public virtual async Task OnCloseAsync()
     {
         var basePermissions = Manager.ListHandler.CRUD;
         var ignoreChanges = basePermissions.Create == false && FormEditMode == FormEditMode.Create || basePermissions.Update == false && FormEditMode == FormEditMode.Update;
@@ -330,15 +335,15 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 _recroDict.GetRgfUiString("UnsavedConfirm"),
                 [
                     new ButtonParameters(_recroDict.GetRgfUiString("Yes"), async (arg) => await FormSaveStartAsync(true)),
-                    new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => Close()),
+                    new ButtonParameters(_recroDict.GetRgfUiString("No"), (arg) => CloseDialogAsync()),
                     new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), isPrimary:true)
                 ],
                 DialogType.Warning);
-
-            return false;
         }
-        Close();
-        return true;
+        else
+        {
+            await CloseDialogAsync();
+        }
     }
 
     protected virtual Task OnFindEntityAsync(IRgfEventArgs<RgfFormEventArgs> arg)
@@ -363,15 +368,17 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
                 Resizable = true,
                 ShowCloseButton = true,
                 UniqueName = "select-" + Manager.EntityDesc.NameVersion.ToLower(),
-                ContentTemplate = RgfEntityComponent.Create(_selectEntityParameters, _logger),
-                OnClose = () => { OnGridItemSelected(new CancelEventArgs(true)); return true; },
+                ContentTemplate = RgfEntityComponent.Create(_selectEntityParameters, _logger)
             };
+            _selectDialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, (arg) => OnGridItemSelected(new CancelEventArgs(true)), true, this);
+            _selectDialogParameters.PredefinedButtons = [new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this), isPrimary: true)];
+
             _selectEntityParameters.EventDispatcher.Subscribe(RgfEntityEventKind.Initialized, (arg) =>
             {
                 _selectDialogParameters.Title = arg.Args.Manager.EntityDesc.MenuTitle;
                 _selectDialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Refresh, this);
-            }, this);
-            _selectDialogParameters.PredefinedButtons = [new ButtonParameters(_recroDict.GetRgfUiString("Cancel"), (arg) => _selectDialogParameters.OnClose())];
+            }, true, this);
+
             FormParameters.DialogParameters.DynamicChild = EntityParameters.DialogTemplate != null ? EntityParameters.DialogTemplate(_selectDialogParameters) : RgfDynamicDialog.Create(_selectDialogParameters, _logger);
             StateHasChanged();
             arg.Handled = true;
@@ -444,7 +451,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             {
                 if (close)
                 {
-                    Close();
+                    await CloseDialogAsync();
                 }
                 return true;
             }
@@ -530,6 +537,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
     public virtual void DisposeFormComponent()
     {
         FormParameters.EventDispatcher.Unsubscribe(this);
+        FormParameters.DialogParameters.EventDispatcher.Unsubscribe(this);
 
         if (Disposables != null)
         {

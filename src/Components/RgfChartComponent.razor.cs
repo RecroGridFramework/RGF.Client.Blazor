@@ -100,7 +100,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
         ChartParameters.DialogParameters.Title = "RecroChart - " + Manager.EntityDesc.MenuTitle;
         ChartParameters.DialogParameters.UniqueName = "chart-" + Manager.EntityDesc.NameVersion.ToLower();
-        ChartParameters.DialogParameters.OnClose = Close;
+        ChartParameters.DialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, OnDialogCloseAsync, true);
         ChartParameters.DialogParameters.ShowCloseButton = true;
         ChartParameters.DialogParameters.ContentTemplate = ContentTemplate(this);
         ChartParameters.DialogParameters.FooterTemplate = FooterTemplate(this);
@@ -128,7 +128,6 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
     private void OnShowChart(IRgfEventArgs args)
     {
-        //ChartParameters.DialogParameters.OnClose = Close; //We'll reset it in case the dialog might have overwritten it
         SetDataStatus(RgfProcessingStatus.Invalid);
         _showComponent = true;
         args.Handled = true;
@@ -138,26 +137,17 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
         _ = EntityParameters.ChartParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfChartEventArgs>(this, eventArgs));
     }
 
-    public void OnClose(MouseEventArgs? args)
-    {
-        if (ChartParameters.DialogParameters.OnClose != null)
-        {
-            ChartParameters.DialogParameters.OnClose();
-        }
-        else
-        {
-            Close();
-        }
-    }
+    private Task OnDialogCloseAsync(IRgfEventArgs<RgfDialogEventArgs> args) => CloseDialogAsync();
 
-    private bool Close()
+    private async Task CloseDialogAsync()
     {
         _chartManagerInited = false;
         _showComponent = false;
-        ChartParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
+        await ChartParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
-        return true;
     }
+
+    public Task OnClose(MouseEventArgs? args) => ChartParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this);
 
     public virtual async Task<bool> CreateChartDataAsyc()
     {

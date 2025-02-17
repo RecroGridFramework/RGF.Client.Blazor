@@ -61,9 +61,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (args) => StateHasChanged()));
 
-        _menuRenderer = new MenuRenderer(EntityParameters);
-        CustomMenu = _menuRenderer.CreateCustomMenu(OnMenuCommand);
-
+        CreateCustomMenu();
         CreateSettingsMenu();
     }
 
@@ -140,12 +138,19 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return SettingsMenu;
     }
 
+    public RenderFragment? CreateCustomMenu(object? icon = null) 
+    {
+        _menuRenderer ??= new MenuRenderer(EntityParameters);
+        CustomMenu = _menuRenderer.CreateCustomMenu(OnMenuCommand, icon);
+        return CustomMenu;
+    }
+
     private async Task OnMenuCommand(RgfMenu menu)
     {
         _logger.LogDebug("OnMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
         RgfDynamicDictionary? data = null;
         RgfEntityKey? entityKey = null;
-        if (menu.MenuType == RgfMenuType.FunctionForRec && Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
+        if (Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
         {
             var item = Manager.SelectedItems.Value.First();
             entityKey = item.Value;
