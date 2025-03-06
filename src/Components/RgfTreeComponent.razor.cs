@@ -75,7 +75,7 @@ public partial class RgfTreeComponent : RgfDataComponentBase
         {
             var entityParameters = new RgfEntityParameters(node.Property.BaseEntityNameVersion, Manager.SessionParams)
             {
-                ParentManager = Manager,
+                ParentEntityParameters = EntityParameters,
                 GridId = null,
                 DisplayMode = RfgDisplayMode.Tree
             };
@@ -95,10 +95,23 @@ public partial class RgfTreeComponent : RgfDataComponentBase
         return node.EmbeddedGrid;
     }
 
+    public async Task SelectNodeAsync(RgfTreeNodeParameters node)
+    {
+        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(node.RowData);
+        await Manager.SelectedItems.SetValueAsync(new() { { rowIndexAndKey.Key, rowIndexAndKey.Value } });
+        StateHasChanged();
+    }
+
+    public Task DispatchToolbarReadEventAsync(RgfTreeNodeParameters node)
+    {
+        var eventArgs = new RgfEventArgs<RgfToolbarEventArgs>(this, new RgfToolbarEventArgs(RgfToolbarEventKind.Read, node.RowData));
+        return EntityParameters.ToolbarParameters.EventDispatcher.DispatchEventAsync(eventArgs.Args.EventKind, eventArgs);
+    }
+
     public override void Dispose()
     {
         base.Dispose();
 
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.Refresh, OnRefresh);
+        EntityParameters?.UnsubscribeFromAll(this);
     }
 }

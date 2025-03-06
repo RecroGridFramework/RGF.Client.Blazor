@@ -5,11 +5,11 @@ using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
 using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Infrastructure.Security;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Blazor.Handlers;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
 using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Models;
-using System.Text.Json;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
@@ -46,13 +46,13 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public bool EnableChart => Manager.EntityDesc.Options.GetBoolValue("RGO_ClientMode") != true && RgfBlazorConfiguration.TryGetComponentType(RgfBlazorConfiguration.ComponentType.Chart, out _);
 
-    public RenderFragment? CustomMenu { get; set; }
-
-    public Func<RgfMenu, Task>? OnMenuRender { get; set; }
+    public RenderFragment? CustomMenu { get; protected set; }
 
     public RgfToolbarParameters ToolbarParameters => EntityParameters.ToolbarParameters;
 
     private RgfDynamicDialog _dynamicDialog { get; set; } = null!;
+
+    private MenuRenderer? _menuRenderer;
 
     protected override void OnInitialized()
     {
@@ -60,9 +60,9 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
         Disposables.Add(Manager.SelectedItems.OnAfterChange(this, (args) => IsSingleSelectedRow = args.NewData?.Count == 1));
         Disposables.Add(Manager.ListHandler.ListDataSource.OnAfterChange(this, (args) => StateHasChanged()));
-        OnMenuRender = MenuRender;
-        CreateSettingsMenu();
+
         CreateCustomMenu();
+        CreateSettingsMenu();
     }
 
     public virtual Task OnToolbarCommand(RgfToolbarEventKind eventKind, RgfDynamicDictionary? data = null)
@@ -125,7 +125,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             Navbar = false,
             Icon = icon,
             OnMenuItemSelect = OnSettingsMenu,
-            OnMenuRender = OnMenuRender,
+            OnMenuRender = _menuRenderer!.OnMenuRender,
             HideOnMouseLeave = true
         };
         SettingsMenu = builder =>
@@ -138,33 +138,10 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         return SettingsMenu;
     }
 
-    public RenderFragment? CreateCustomMenu(object? icon = null)
+    public RenderFragment? CreateCustomMenu(object? icon = null) 
     {
-        Type menuType = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Menu);
-        var customMenu = Manager.EntityDesc.Options.GetStringValue("RGO_CustomMenu");
-        if (!string.IsNullOrEmpty(customMenu))
-        {
-            var menu = JsonSerializer.Deserialize<RgfMenu>(customMenu, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
-            if (menu != null)
-            {
-                var param = new RgfMenuParameters()
-                {
-                    MenuItems = menu.NestedMenu,
-                    Navbar = false,
-                    Icon = icon,
-                    OnMenuItemSelect = OnMenuCommand,
-                    OnMenuRender = OnMenuRender,
-                    HideOnMouseLeave = true
-                };
-                CustomMenu = builder =>
-                {
-                    int sequence = 0;
-                    builder.OpenComponent(sequence++, menuType);
-                    builder.AddAttribute(sequence++, "MenuParameters", param);
-                    builder.CloseComponent();
-                };
-            }
-        }
+        _menuRenderer ??= new MenuRenderer(EntityParameters);
+        CustomMenu = _menuRenderer.CreateCustomMenu(OnMenuCommand, icon);
         return CustomMenu;
     }
 
@@ -173,7 +150,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
         _logger.LogDebug("OnMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
         RgfDynamicDictionary? data = null;
         RgfEntityKey? entityKey = null;
-        if (menu.MenuType == RgfMenuType.FunctionForRec && Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
+        if (Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
         {
             var item = Manager.SelectedItems.Value.First();
             entityKey = item.Value;
@@ -312,16 +289,6 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
             }
         }
         return false;
-    }
-
-    private Task MenuRender(RgfMenu menu)
-    {
-        menu.Disabled = EntityParameters.DisplayMode == RfgDisplayMode.Tree && new string[] { Menu.ColumnSettings, Menu.SaveSettings, Menu.ResetSettings }.Contains(menu.Command);
-        if (menu.MenuType == RgfMenuType.FunctionForRec)
-        {
-            menu.Disabled = Manager.SelectedItems.Value.Count == 0 || (EntityParameters.GridParameters.EnableMultiRowSelection != true && Manager.SelectedItems.Value.Count > 1);
-        }
-        return Task.CompletedTask;
     }
 
     public void OnDelete()

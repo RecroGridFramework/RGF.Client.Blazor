@@ -148,7 +148,6 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
             param.FormParameters.FormViewKey.EntityKey = entityKey;
             RgfDialogParameters dialogParameters = new()
             {
-                IsModal = false,
                 ShowCloseButton = true,
                 Resizable = true,
                 UniqueName = "quickwatch",
@@ -203,7 +202,6 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         }
         RgfDialogParameters dialogParameters = new()
         {
-            IsModal = false,
             ShowCloseButton = true,
             Resizable = true,
             UniqueName = "recrotrack",
@@ -307,10 +305,10 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
                 await EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
             }
             GridDataSource.Value = args.NewData;
-            if (EntityParameters.DisplayMode == RfgDisplayMode.Tree ||
-                SelectedItems.Any() && EntityParameters.GridParameters.EnableMultiRowSelection != true)
+            if (SelectedItems.Count > 1 && (EntityParameters.DisplayMode == RfgDisplayMode.Tree || EntityParameters.GridParameters.EnableMultiRowSelection != true))
             {
-                await Manager.SelectedItems.SetValueAsync(new());
+                var first = SelectedItems.First();
+                await Manager.SelectedItems.SetValueAsync(new() { { first.Key, first.Value } });
             }
         }
         finally
@@ -321,8 +319,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
 
     public virtual void Dispose()
     {
-        EntityParameters.ToolbarParameters.MenuEventDispatcher.Unsubscribe([Menu.QueryString, Menu.QuickWatch, Menu.RecroTrack, Menu.ExportCsv], OnMenuCommandAsync);
-        EntityParameters.ToolbarParameters.EventDispatcher.Unsubscribe(RgfToolbarEventKind.ToggleQuickFilter, OnToggleQuickFilter);
+        EntityParameters?.UnsubscribeFromAll(this);
 
         if (Disposables != null)
         {

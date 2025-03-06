@@ -22,7 +22,7 @@ public class RgfEntityParameters : RgfSessionParams
 
     public IRgManager? Manager { get; internal set; }
 
-    public IRgManager? ParentManager { get; internal set; }
+    public RgfEntityParameters? ParentEntityParameters { get; internal set; }
 
     public string EntityName { get; }
 
@@ -54,7 +54,25 @@ public class RgfEntityParameters : RgfSessionParams
 
     public RgfFilterParent? FilterParent { get; set; }
 
-    public Dictionary<string, object>? CustomParams { get; set; }
+    public Dictionary<string, object>? CustomParameters { get; set; }
 
     public RgfEventDispatcher<RgfEntityEventKind, RgfEntityEventArgs> EventDispatcher { get; } = new();
+
+    public void UnsubscribeFromAll(object subscriber)
+    {
+        ParentEntityParameters?.UnsubscribeFromAll(subscriber);
+
+        EventDispatcher.Unsubscribe(subscriber);
+
+        FilterParameters.DialogParameters.EventDispatcher.Unsubscribe(subscriber);
+
+        ToolbarParameters.EventDispatcher.Unsubscribe(subscriber);
+        ToolbarParameters.MenuEventDispatcher.Unsubscribe(subscriber);
+
+        GridParameters.EventDispatcher.Unsubscribe(subscriber);
+        FormParameters.EventDispatcher.Unsubscribe(subscriber);
+
+        ChartParameters.EventDispatcher.Unsubscribe(subscriber);
+        ChartParameters.DialogParameters.EventDispatcher.Unsubscribe(subscriber);
+    }
 }

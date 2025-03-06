@@ -66,7 +66,8 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
             Columns[i].ColPos = ++i;
         }
 
-        DialogParameters.OnClose = Close; //We'll reset it in case the dialog might have overwritten it
+        DialogParameters.EventDispatcher.Unsubscribe(this);//We'll reset it in case the dialog might have overwritten it
+        DialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, OnDialogCloseAsync, true);
         if (BaseDataComponent.EntityParameters.DialogTemplate != null)
         {
             _settingsDialog = BaseDataComponent.EntityParameters.DialogTemplate(DialogParameters);
@@ -80,29 +81,22 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
-    public void OnClose(MouseEventArgs? arg)
-    {
-        if (DialogParameters.OnClose != null)
-        {
-            DialogParameters.OnClose();
-        }
-        else
-        {
-            Close();
-        }
-    }
+    private Task OnDialogCloseAsync(IRgfEventArgs<RgfDialogEventArgs> args) => CloseDialogAsync();
 
-    private bool Close()
+    private async Task CloseDialogAsync()
     {
         _logger.LogDebug("RgfGridColumnSettings.Close");
         _settingsDialog = null;
+        await DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
-        return true;
     }
+
+    public Task OnClose(MouseEventArgs? args) => DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this);
 
     public async Task SaveAsync()
     {
-        OnClose(null);
+        _logger.LogDebug("RgfGridColumnSettings.Save");
+        await CloseDialogAsync();
         bool changed = await Manager.ListHandler.SetVisibleColumnsAsync(Columns);
         if (changed)
         {

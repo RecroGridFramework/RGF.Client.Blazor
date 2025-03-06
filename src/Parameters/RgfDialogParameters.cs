@@ -1,14 +1,20 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Recrovit.RecroGridFramework.Client.Blazor.Components;
+using Recrovit.RecroGridFramework.Client.Events;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfDialogParameters
 {
+    public RgfDialogParameters()
+    {
+        EventDispatcher.Subscribe(RgfDialogEventKind.Close, (args) => EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this), true);
+    }
+
     public string? Title { get; set; }
 
-    public bool IsModal { get; set; } = true;
+    public bool IsInline { get; set; }
 
     public DialogType DialogType { get; set; } = DialogType.Default;
 
@@ -34,12 +40,6 @@ public class RgfDialogParameters
 
     public RenderFragment? DynamicChild { get; set; }
 
-    public Func<bool>? OnClose { get; set; }
-
-    public Action? Destroy { get; set; }
-
-    public Action? Refresh { get; set; }
-
     public IEnumerable<ButtonParameters>? PredefinedButtons { get; set; }
 
     public IEnumerable<ButtonParameters>? LeftButtons { get; set; }
@@ -63,6 +63,8 @@ public class RgfDialogParameters
     }
 
     public RenderFragment Content => ContentTemplate ?? ((builder) => builder.AddContent(1, ""));
+
+    public RgfEventDispatcher<RgfDialogEventKind, RgfDialogEventArgs> EventDispatcher { get; } = new();
 }
 
 public class ButtonParameters

@@ -51,9 +51,11 @@ public partial class RgfDynamicDialog : ComponentBase
         };
     }
 
-    private Dictionary<int, RenderFragment> _dynamicDialogs { get; set; } = new();
+    private Dictionary<int, RenderFragment> _dynamicDialogs { get; set; } = [];
 
-    private int _componentCount { get; set; } = 0;
+    public int DialogCount => _dynamicDialogs.Count;
+
+    private int _dialogKeyCounter { get; set; } = 0;
 
     public void Info(string title, string message) => Dialog(DialogType.Info, title, message);
 
@@ -98,20 +100,13 @@ public partial class RgfDynamicDialog : ComponentBase
 
     public void Dialog(RgfDialogParameters parameters)
     {
-        var key = ++_componentCount;
-        parameters.OnClose = () =>
-        {
-            if (parameters.Destroy != null)
-            {
-                parameters.Destroy();
-            }
-            return Close(key);
-        };
+        var key = ++_dialogKeyCounter;
+        parameters.EventDispatcher.Subscribe(RgfDialogEventKind.Destroy, (args) => Destroy(key), true);
         if (parameters.PredefinedButtons == null)
         {
-            parameters.PredefinedButtons = new List<ButtonParameters>() { new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.OnClose(), true) };
+            parameters.PredefinedButtons = [new(RecroDict.GetRgfUiString("Close"), (arg) => parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this), isPrimary: true)];
         }
-        _dynamicDialogs.Add(_componentCount, Create(parameters));
+        _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
     }
 
@@ -181,16 +176,17 @@ public partial class RgfDynamicDialog : ComponentBase
                 _ => title
             };
         }
-        var key = ++_componentCount;
+        var key = ++_dialogKeyCounter;
         RgfDialogParameters parameters = new()
         {
             Title = title,
             DialogType = dialogType,
             ShowCloseButton = false,
             ContentTemplate = content,
-            OnClose = () => Close(key),
             PredefinedButtons = buttons
         };
+        parameters.EventDispatcher.Subscribe(RgfDialogEventKind.Destroy, (args) => Destroy(key), true);
+
         foreach (var item in buttons)
         {
             var handler = item.Callback;
@@ -200,17 +196,16 @@ public partial class RgfDynamicDialog : ComponentBase
                 {
                     await handler.Invoke(arg);
                 }
-                parameters.OnClose();
+                await parameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Close, this);
             };
         }
-        _dynamicDialogs.Add(_componentCount, Create(parameters));
+        _dynamicDialogs.Add(_dialogKeyCounter, Create(parameters));
         StateHasChanged();
     }
 
-    private bool Close(int key)
+    private void Destroy(int key)
     {
         _dynamicDialogs.Remove(key);
         StateHasChanged();
-        return true;
     }
 }
