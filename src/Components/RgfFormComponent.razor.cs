@@ -352,9 +352,13 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         _selectParam = arg.Args.SelectParam;
         if (_selectParam != null)
         {
-            _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams) { SelectParam = _selectParam };
+            _selectEntityParameters = new RgfEntityParameters(_selectParam.EntityName, Manager.SessionParams)
+            {
+                SelectParam = _selectParam,
+                DisplayMode = RfgDisplayMode.Grid,
+                AutoOpenForm = arg.Args.EventKind == RgfFormEventKind.EntityDisplay
+            };
             _selectEntityParameters.GridParameters.EnableMultiRowSelection = false;
-            _selectEntityParameters.AutoOpenForm = arg.Args.EventKind == RgfFormEventKind.EntityDisplay;
             if (FormProperties.Any(e => e.Id == _selectParam.PropertyId && e.PropertyDesc.Editable && !e.Readonly && !e.Disabled))
             {
                 _selectParam.ItemSelectedEvent.Subscribe(OnGridItemSelected);

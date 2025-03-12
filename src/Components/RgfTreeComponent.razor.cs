@@ -18,7 +18,10 @@ public partial class RgfTreeComponent : RgfDataComponentBase
 
     private Dictionary<int, RgfTreeNodeParameters> _nodeCache = [];
 
-    private List<RgfProperty> GridTypeProperties => _gridProperties ??= Manager.EntityDesc.Properties.Where(e => e.FormType == PropertyFormType.RecroGrid && e.FormTab > 0).OrderBy(e => $"{e.FormTab}/{e.FormGroup}/{e.FormPos}").ToList();
+    private List<RgfProperty> GridTypeProperties => _gridProperties ??= Manager.EntityDesc.Properties
+        .Where(e => e.FormType == PropertyFormType.RecroGrid && e.FormTab > 0 && e.Options?.GetBoolValue("RGO_TreeViewExclude") != true)
+        .OrderBy(e => $"{e.FormTab}/{e.FormGroup}/{e.FormPos}")
+        .ToList();
 
     private int? _treeViewColumnCount;
 
