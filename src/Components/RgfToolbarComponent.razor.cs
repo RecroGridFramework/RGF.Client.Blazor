@@ -147,7 +147,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     private async Task OnMenuCommand(RgfMenu menu)
     {
-        _logger.LogDebug("OnMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
+        _logger.LogDebug("OnMenuCommand | {type}:{command}", menu.MenuType, menu.Command);
         RgfDynamicDictionary? data = null;
         RgfEntityKey? entityKey = null;
         if (Manager.SelectedItems.Value.Count > 0 && (IsSingleSelectedRow || EntityParameters.GridParameters.EnableMultiRowSelection == true))
@@ -234,7 +234,7 @@ public partial class RgfToolbarComponent : ComponentBase, IDisposable
 
     public virtual async Task<bool> OnSetGridSettingAsync(int? gridSettingsId, string name)
     {
-        _logger.LogDebug("OnSetGridSetting: {id}:{name}", gridSettingsId, name);
+        _logger.LogDebug("OnSetGridSetting | {id}:{name}", gridSettingsId, name);
         if (gridSettingsId > 0)
         {
             var gs = GridSettingList.FirstOrDefault(e => e.GridSettingsId == gridSettingsId);

@@ -32,11 +32,11 @@ public partial class RgfDynamicDialog : ComponentBase
     public static RenderFragment Create(RgfDialogParameters parameters, ILogger? logger = null, Func<RgfComponentWrapper, Task>? onComponentInitialized = null)
     {
         Type type = RgfBlazorConfiguration.GetComponentType(RgfBlazorConfiguration.ComponentType.Dialog);
-        logger?.LogDebug("RgfDynamicDialog.Create");
+        logger?.LogDebug("Create | {DialogType}:{UniqueName}, {Title}", parameters.DialogType, parameters.UniqueName, parameters.Title);
         int build = 1;
         return builder =>
         {
-            logger?.LogDebug("RgfDynamicDialog.Build:{build}", build++);
+            logger?.LogDebug("Build | Build:{build}, {DialogType}:{UniqueName}, {Title}", build++, parameters.DialogType, parameters.UniqueName, parameters.Title);
             int sequence = 0;
             builder.OpenComponent<RgfComponentWrapper>(sequence++);
             builder.AddAttribute(sequence++, nameof(RgfComponentWrapper.OnComponentInitialized), onComponentInitialized);

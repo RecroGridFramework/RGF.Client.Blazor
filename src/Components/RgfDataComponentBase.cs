@@ -77,9 +77,9 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
+        _logger.LogDebug("OnAfterRender | EntityName:{EntityName}, FirstRender:{firstRender}", EntityParameters.EntityName, firstRender);
 
-        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+        await base.OnAfterRenderAsync(firstRender);
 
         var eventArg = new RgfEventArgs<RgfListEventArgs>(this, RgfListEventArgs.CreateAfterRenderEvent(this, firstRender));
         await EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
@@ -140,7 +140,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
 
     protected void QuickWatch()
     {
-        _logger.LogDebug("RgfGridComponent.QuickWatch");
+        _logger.LogDebug("QuickWatch");
         var entityKey = SelectedItems.FirstOrDefault().Value;
         if (entityKey?.IsEmpty == false)
         {
@@ -193,7 +193,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
 
     protected void RecroTrack()
     {
-        _logger.LogDebug("RgfGridComponent.RecroTrack");
+        _logger.LogDebug("RecroTrack");
         var param = new RgfEntityParameters("RecroTrack", Manager.SessionParams);
         var entityKey = SelectedItems.FirstOrDefault().Value;
         if (entityKey?.IsEmpty == false)
@@ -234,7 +234,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         var rgparams = rowData.Get<Dictionary<string, object>>("__rgparams");
         if (rgparams?.TryGetValue("Options", out var op) == true && op is Dictionary<string, object> options)
         {
-            _logger.LogDebug("CreateAttributes");
+            _logger.LogDebug("CreateAttributes | EntityName:{EntityName}", EntityParameters.EntityName);
             var attributes = rowData.GetOrNew<RgfDynamicDictionary>("__attributes");
             foreach (var option in options.Where(o => o.Value != null))
             {
@@ -292,7 +292,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
     {
         try
         {
-            _logger.LogDebug("OnChangeData");
+            _logger.LogDebug("OnChangedGridData");
             var entityDesc = Manager.EntityDesc;
             var rgo = new string[] { "RGO_CssClass", "RGO_Style", "RGO_JSRowClass", "RGO_JSRowStyle" };
             var prop4RowStyles = entityDesc.Properties.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();

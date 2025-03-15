@@ -85,7 +85,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     private async Task CloseDialogAsync()
     {
-        _logger.LogDebug("RgfGridColumnSettings.Close");
+        _logger.LogDebug("CloseDialog | EntityName:{EntityName}", BaseDataComponent.EntityParameters.EntityName);
         _settingsDialog = null;
         await DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
@@ -95,7 +95,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public async Task SaveAsync()
     {
-        _logger.LogDebug("RgfGridColumnSettings.Save");
+        _logger.LogDebug("Save | EntityName:{EntityName}", BaseDataComponent.EntityParameters.EntityName);
         await CloseDialogAsync();
         bool changed = await Manager.ListHandler.SetVisibleColumnsAsync(Columns);
         if (changed)

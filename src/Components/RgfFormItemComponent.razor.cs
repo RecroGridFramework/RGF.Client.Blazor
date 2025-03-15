@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -8,6 +9,9 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 
 public partial class RgfFormItemComponent : ComponentBase, IDisposable
 {
+    [Inject]
+    internal ILogger<RgfFormItemComponent> _logger { get; set; } = null!;
+
     public RgfFormParameters FormParameters => BaseFormComponent.FormParameters;
 
     public string ErrorCssClass => FormParameters.ErrorCssClass ?? "";
@@ -44,13 +48,16 @@ public partial class RgfFormItemComponent : ComponentBase, IDisposable
         FormItemParameters.ItemData.OnAfterChange += (args) => { BaseFormComponent.FormValidation?.NotifyFieldChanged(FormItemParameters); };
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnAfterRender(bool firstRender)
     {
+        _logger.LogDebug("OnAfterRender | Property:{Alias}, FirstRender:{firstRender}", Property.Alias, firstRender);
+
+        base.OnAfterRender(firstRender);
+
         if (firstRender)
         {
             _firstRenderCompletion.SetResult(true);
         }
-        return base.OnAfterRenderAsync(firstRender);
     }
 
     private void OnValidation(object? sender, ValidationRequestedEventArgs args)

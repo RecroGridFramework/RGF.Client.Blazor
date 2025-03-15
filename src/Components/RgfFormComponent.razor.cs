@@ -92,6 +92,8 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     protected override async Task OnParametersSetAsync()
     {
+        _logger.LogDebug("OnParametersSet | EntityName:{EntityName}", EntityParameters.EntityName);
+
         await base.OnParametersSetAsync();
 
         var key = FormParameters.FormViewKey.EntityKey;
@@ -115,9 +117,9 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
+        _logger.LogDebug("OnAfterRender | EntityName:{EntityName}, FirstRender:{firstRender}", EntityParameters.EntityName, firstRender);
 
-        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+        await base.OnAfterRenderAsync(firstRender);
 
         var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, RgfFormEventArgs.CreateAfterRenderEvent(this, firstRender));
         await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
@@ -135,7 +137,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         var children = FormItemComponents.Select(e => e.FirstRenderCompletionTask).ToArray();
         _ = Task.WhenAll(children).ContinueWith(async (task) =>
         {
-            _logger.LogDebug("Form items have been successfully rendered.");
+            _logger.LogDebug("OnRendered | EntityName:{EntityName}", EntityParameters.EntityName);
 
             var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormItemsFirstRenderCompleted, this));
             await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
@@ -348,7 +350,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
 
     protected virtual Task OnFindEntityAsync(IRgfEventArgs<RgfFormEventArgs> arg)
     {
-        _logger.LogDebug("OnFindEntity");
+        _logger.LogDebug("OnFindEntity | EntityName:{EntityName}", EntityParameters.EntityName);
         _selectParam = arg.Args.SelectParam;
         if (_selectParam != null)
         {
@@ -416,7 +418,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             CurrentEditContext = new(FormData.DataRec);
             var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
             await FormParameters.EventDispatcher.DispatchEventAsync(eventArg.Args.EventKind, eventArg);
-            _logger.LogDebug("FormDataInitialized");
+            _logger.LogDebug("FormDataInitialized | EntityName:{EntityName}", EntityParameters.EntityName);
             return true;
         }
         return false;
@@ -491,7 +493,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         RgfResult<RgfFormResult> res;
         if (FormParameters.OnSaveAsync != null)
         {
-            _logger.LogDebug("OnSaveAsync => refresh:{refresh}", refresh);
+            _logger.LogDebug("Save | EntityName:{EntityName}, Refresh:{refresh}", EntityParameters.EntityName, refresh);
             res = await FormParameters.OnSaveAsync.Invoke(this, refresh);
         }
         else
@@ -528,7 +530,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             var foreign = prop.ForeignEntity.EntityKeys.First().Foreign;
             var keyProp = Manager.EntityDesc.Properties.SingleOrDefault(e => e.Id == foreign);
 
-            _logger.LogDebug("ApplySelectParam => filter:{alias}={value}, key:{alias}={value}", prop.Alias, filter.Value, keyProp?.Alias, key.Value);
+            _logger.LogDebug("ApplySelectParam | filter:{alias}={value}, key:{alias}={value}", prop.Alias, filter.Value, keyProp?.Alias, key.Value);
 
             FormData.DataRec.SetMember(prop.Alias, filter.Value);
             if (keyProp?.Alias != null)
