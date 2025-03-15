@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Recrovit.RecroGridFramework.Abstraction.Models;
+using Recrovit.RecroGridFramework.Client.Events;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
-public class RgfTreeNodeParameters
+public class RgfTreeNodeParameters : IRgfTreeNodeParameters
 {
     public int AbsoluteRowIndex { get; set; }
 

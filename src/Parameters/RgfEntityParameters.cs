@@ -42,6 +42,8 @@ public class RgfEntityParameters : RgfSessionParams
 
     public RgfChartParameters ChartParameters { get; set; } = new();
 
+    public RgfTreeParameters TreeParameters { get; set; } = new();
+
     public RenderFragment<IRgManager>? TitleTemplate { get; set; }
 
     public bool FormOnly { get; set; }
@@ -74,5 +76,7 @@ public class RgfEntityParameters : RgfSessionParams
 
         ChartParameters.EventDispatcher.Unsubscribe(subscriber);
         ChartParameters.DialogParameters.EventDispatcher.Unsubscribe(subscriber);
+
+        TreeParameters.EventDispatcher.Unsubscribe(subscriber);
     }
 }
