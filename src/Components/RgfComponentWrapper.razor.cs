@@ -9,7 +9,7 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Components;
 [Obsolete("Use RgfComponentWrapper instead", true)]
 public class DynamicComponentWrapper : RgfComponentWrapper { }
 
-public partial class RgfComponentWrapper : ComponentBase//
+public partial class RgfComponentWrapper : ComponentBase
 {
     [Inject]
     private ILogger<RgfComponentWrapper> _logger { get; set; } = null!;
@@ -76,9 +76,9 @@ public partial class RgfComponentWrapper : ComponentBase//
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
+        _logger.LogDebug("OnAfterRender | ComponentType:{ComponentType}, FirstRender:{firstRender}", ComponentType, firstRender);
 
-        _logger.LogDebug($"OnAfterRender first:{firstRender}");
+        await base.OnAfterRenderAsync(firstRender);
 
         var eventArgs = RgfWrapperEventArgs<RgfComponentWrapper>.CreateAfterRenderEvent(this, firstRender);
         await EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfWrapperEventArgs<RgfComponentWrapper>>(this, eventArgs));

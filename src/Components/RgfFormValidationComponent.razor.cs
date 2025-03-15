@@ -51,7 +51,7 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
             CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
             return;
         }
-        BaseFormComponent._logger.LogDebug("OnFieldChanged: {FieldName}", fieldIdentifier.FieldName);
+        BaseFormComponent._logger.LogDebug("OnFieldChanged | {FieldName}", fieldIdentifier.FieldName);
         string alias = fieldIdentifier.FieldName;
         var property = BaseFormComponent.FormData.FormTabs.SelectMany(e => e.Groups.SelectMany(g => g.Properties)).SingleOrDefault(e => e.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase));
         if (property != null)
@@ -59,7 +59,7 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
             if (!BaseFormComponent.FormHandler.IsModified(BaseFormComponent.FormData, property))
             {
                 CurrentEditContext.MarkAsUnmodified(fieldIdentifier);
-                BaseFormComponent._logger.LogDebug("MarkAsUnmodified: {FieldName}", fieldIdentifier.FieldName);
+                BaseFormComponent._logger.LogDebug("MarkAsUnmodified | {FieldName}", fieldIdentifier.FieldName);
             }
             _ = ValidationRequestedAsync(fieldIdentifier);
         }
@@ -71,7 +71,7 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
         {
             return;
         }
-        BaseFormComponent._logger.LogDebug("ValidationRequested: {FieldName}", fieldIdentifier.FieldName);
+        BaseFormComponent._logger.LogDebug("ValidationRequested | {FieldName}", fieldIdentifier.FieldName);
         RgfFormEventArgs eventArgs;
         if (string.IsNullOrEmpty(fieldIdentifier.FieldName))
         {
@@ -182,7 +182,7 @@ public partial class RgfFormValidationComponent : ComponentBase, IRgfFormValidat
     public void NotifyFieldChanged(RgfFormItemParameters formItemParameters)
     {
         var property = formItemParameters.Property;
-        BaseFormComponent._logger.LogDebug("NotifyFieldChanged: {Alias}", property.Alias);
+        BaseFormComponent._logger.LogDebug("NotifyFieldChanged | {Alias}", property.Alias);
         if (property.ForeignEntity?.EntityKeys.Any() == true)
         {
             //If the selector field is typed into, the previous key should be deleted
@@ -241,7 +241,7 @@ public class RgfFieldCssClassProvider : FieldCssClassProvider
         {
             cssClass = $"{cssClass} {formPar.ModifiedCssClass}";
         }
-        //BaseFormComponent._logger.LogDebug("GetFieldCssClass: {FieldName}, CssClass: {cssClass}", fieldId.FieldName, cssClass);
+        //BaseFormComponent._logger.LogDebug("GetFieldCssClass | {FieldName}, CssClass: {cssClass}", fieldId.FieldName, cssClass);
         return cssClass.Trim();
     }
 }

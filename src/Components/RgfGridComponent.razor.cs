@@ -64,7 +64,7 @@ public partial class RgfGridComponent : RgfDataComponentBase
 
     private async Task OnHeaderMenuCommand(RgfMenu menu)
     {
-        _logger.LogDebug("OnHeaderMenuCommand: {type}:{command}", menu.MenuType, menu.Command);
+        _logger.LogDebug("OnHeaderMenuCommand | {type}:{command}", menu.MenuType, menu.Command);
         _headerMenu = null;
         StateHasChanged();
 

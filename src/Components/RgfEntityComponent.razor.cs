@@ -26,7 +26,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
         return builder =>
         {
-            logger?.LogDebug("RgfEntityComponent.Create => EntityName:{EntityName}, GridId:{GridId}", entityParameters.EntityName, entityParameters.GridId);
+            logger?.LogDebug("Create | EntityName:{EntityName}, GridId:{GridId}", entityParameters.EntityName, entityParameters.GridId);
             int sequence = 0;
             builder.OpenComponent(sequence++, type);
             builder.AddAttribute(sequence++, nameof(RgfEntityComponent.EntityParameters), entityParameters);
@@ -62,16 +62,21 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        _logger.LogDebug("OnInitialized | EntityName:{EntityName}", EntityParameters.EntityName);
+
         await base.OnInitializedAsync();
+
         EntityName = EntityParameters.EntityName;
-        _logger.LogDebug("RgfEntityComponent.OnInitializedAsync: {EntityName}", EntityName);
+
         await CreateManagerAsync();
     }
 
     protected override void OnParametersSet()
     {
+        _logger.LogDebug("OnParametersSet | EntityName:{EntityName}", EntityParameters.EntityName);
+
         base.OnParametersSet();
-        _logger.LogDebug("RgfEntityComponent.OnParametersSetAsync: {EntityName}", EntityParameters.EntityName);
+
         if (EntityName != EntityParameters.EntityName)
         {
             EntityName = EntityParameters.EntityName;
@@ -85,9 +90,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     private async Task CreateManagerAsync()
     {
-        _logger.LogDebug("RgfEntityComponent.CreateManagerAsync");
-        var gridRequest = RgfGridRequest.Create(this.EntityParameters);
-        gridRequest.EntityName = this.EntityParameters.EntityName;
+        _logger.LogDebug("CreateManager | EntityName:{EntityName}", EntityParameters.EntityName);
+        var gridRequest = RgfGridRequest.Create(EntityParameters);
+        gridRequest.EntityName = EntityParameters.EntityName;
         gridRequest.Skeleton = true;
         gridRequest.SelectParam = EntityParameters.SelectParam;
         gridRequest.EntityKey = EntityParameters.FormParameters?.FormViewKey.EntityKey;
@@ -136,7 +141,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             _initialized = true;
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
             await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
-            _logger.LogDebug("RgfEntityComponent.Initialized");
+            _logger.LogDebug("Initialized | EntityName:{EntityName}", EntityParameters.EntityName);
         }
         else
         {
@@ -192,6 +197,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     private void Refresh(bool recreate)
     {
+        _logger.LogDebug("Refresh | EntityName:{EntityName}", EntityParameters.EntityName);
         _initialized = false;
         StateHasChanged();
         _ = Task.Run(async () =>
@@ -201,7 +207,6 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
                 await CreateManagerAsync();
             }
             _initialized = true;
-            _logger.LogDebug("RgfEntityComponent.Initialized");
             var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
             await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
             StateHasChanged();
@@ -231,7 +236,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     {
         if (Manager != null)
         {
-            _logger.LogDebug("Manager.Dispose: {EntityName}", this.EntityName);
+            _logger.LogDebug("Dispose Manager | EntityName:{EntityName}", this.EntityName);
             EntityParameters?.UnsubscribeFromAll(this);
             Manager.Dispose();
             Manager = null;
