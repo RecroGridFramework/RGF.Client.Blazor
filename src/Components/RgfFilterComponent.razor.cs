@@ -79,7 +79,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     protected virtual async Task OnShowFilter(IRgfEventArgs<RgfToolbarEventArgs> args)
     {
-        _logger.LogDebug("RgfFilter.ShowFilter");
+        _logger.LogDebug("OnShowFilter | EntityName:{EntityName}", EntityParameters.EntityName);
         FilterHandler = await Manager.GetFilterHandlerAsync();
         Condition = new RgfFilter.Condition() { Conditions = FilterHandler.Conditions };
         IsFilterActive = Manager.IsFiltered || !FilterHandler.Conditions.Any();
@@ -108,7 +108,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     private async Task CloseDialogAsync()
     {
-        _logger.LogDebug("RgfFilter.Close");
+        _logger.LogDebug("CloseDialog | EntityName:{EntityName}", EntityParameters.EntityName);
         _showComponent = false;
         await FilterParameters.DialogParameters.EventDispatcher.RaiseEventAsync(RgfDialogEventKind.Destroy, this);
         StateHasChanged();
@@ -124,7 +124,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public virtual async Task OnOk(MouseEventArgs? args = null)
     {
-        _logger.LogDebug("RgfFilter.OnOk");
+        _logger.LogDebug("OnOk | EntityName:{EntityName}", EntityParameters.EntityName);
         await CloseDialogAsync();
         var conditions = IsFilterActive ? FilterHandler.StoreFilter() : [];
         await Manager.ListHandler.SetFilterAsync(conditions, FilterSettings.SQLTimeout);
@@ -141,7 +141,7 @@ public partial class RgfFilterComponent : ComponentBase, IDisposable
 
     public virtual bool OnSetPredefinedFilter(int? filterSettingsId, string name)
     {
-        _logger.LogDebug("SetPredefinedFilter: {id}:{name}", filterSettingsId, name);
+        _logger.LogDebug("SetPredefinedFilter | {id}:{name}", filterSettingsId, name);
         RgfFilterSettings? predefFilter = null;
         if (filterSettingsId > 0)
         {

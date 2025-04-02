@@ -18,7 +18,10 @@ public partial class RgfTreeComponent : RgfDataComponentBase
 
     private Dictionary<int, RgfTreeNodeParameters> _nodeCache = [];
 
-    private List<RgfProperty> GridTypeProperties => _gridProperties ??= Manager.EntityDesc.Properties.Where(e => e.FormType == PropertyFormType.RecroGrid && e.FormTab > 0).OrderBy(e => $"{e.FormTab}/{e.FormGroup}/{e.FormPos}").ToList();
+    private List<RgfProperty> GridTypeProperties => _gridProperties ??= Manager.EntityDesc.Properties
+        .Where(e => e.FormType == PropertyFormType.RecroGrid && e.FormTab > 0 && e.Options?.GetBoolValue("RGO_TreeViewExclude") != true)
+        .OrderBy(e => $"{e.FormTab}/{e.FormGroup}/{e.FormPos}")
+        .ToList();
 
     private int? _treeViewColumnCount;
 
@@ -40,33 +43,33 @@ public partial class RgfTreeComponent : RgfDataComponentBase
     public RgfTreeNodeParameters GetNodeParameters(RgfDynamicDictionary rowData)
     {
         int absoluteRowIndex = Manager.ListHandler.GetAbsoluteRowIndex(rowData);
-        RgfTreeNodeParameters? node;
-        if (_nodeCache.TryGetValue(absoluteRowIndex, out node))
+        RgfTreeNodeParameters? nodeParameters;
+        if (_nodeCache.TryGetValue(absoluteRowIndex, out nodeParameters))
         {
-            return node;
+            return nodeParameters;
         }
-        node = new RgfTreeNodeParameters()
+        nodeParameters = new RgfTreeNodeParameters()
         {
             RowData = rowData,
             AbsoluteRowIndex = absoluteRowIndex,
             EntityParameters = EntityParameters,
             Property = Manager.EntityDesc.SortedVisibleColumns.FirstOrDefault()
         };
-        node.Children = [];
+        nodeParameters.Children = [];
         foreach (var prop in this.GridTypeProperties)
         {
             var child = new RgfTreeNodeParameters()
             {
-                RowData = node.RowData,
+                RowData = nodeParameters.RowData,
                 Property = prop,
-                AbsoluteRowIndex = node.AbsoluteRowIndex
+                AbsoluteRowIndex = nodeParameters.AbsoluteRowIndex
             };
             child.EmbeddedGrid = GetEmbeddedGrid(child);
-            node.Children.Add(child);
+            nodeParameters.Children.Add(child);
         }
 
-        _nodeCache[absoluteRowIndex] = node;
-        return node;
+        _nodeCache[absoluteRowIndex] = nodeParameters;
+        return nodeParameters;
     }
 
     public RenderFragment? GetEmbeddedGrid(RgfTreeNodeParameters node)

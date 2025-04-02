@@ -372,7 +372,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
     public virtual async Task<bool> OnSetChartSettingAsync(int? chartSettingsId, string name)
     {
-        _logger.LogDebug("OnSetChartSetting: {id}:{name}", chartSettingsId, name);
+        _logger.LogDebug("OnSetChartSetting | {id}:{name}", chartSettingsId, name);
         if (chartSettingsId > 0)
         {
             var gs = ChartSettingList.FirstOrDefault(e => e.ChartSettingsId == chartSettingsId);
