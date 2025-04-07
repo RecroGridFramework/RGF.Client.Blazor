@@ -50,6 +50,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     public IRgManager? Manager { get; set; }
 
+    private CancellationTokenSource? _createManagerCancellationTokenSource;
+
     private bool _initialized = false;
 
     private bool _showFormView { get; set; }
@@ -68,7 +70,16 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
         EntityName = EntityParameters.EntityName;
 
-        await CreateManagerAsync();
+        _createManagerCancellationTokenSource = new CancellationTokenSource();
+        try
+        {
+
+            await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("OnInitialized | OperationCanceledException | EntityName:{EntityName}", EntityParameters.EntityName);
+        }
     }
 
     protected override void OnParametersSet()
@@ -88,9 +99,10 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         }
     }
 
-    private async Task CreateManagerAsync()
+    private async Task CreateManagerAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("CreateManager | EntityName:{EntityName}", EntityParameters.EntityName);
+        _logger.LogDebug("CreateManager | EntityName:{EntityName} - {HashCode}", EntityParameters.EntityName, this.GetHashCode());
+
         var gridRequest = RgfGridRequest.Create(EntityParameters);
         gridRequest.EntityName = EntityParameters.EntityName;
         gridRequest.Skeleton = true;
@@ -115,38 +127,52 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             EntityParameters.Manager = Manager;
         }
-        else if (await ((RgManager)Manager).InitializeAsync(gridRequest))
-        {
-            if (EntityParameters.FormOnly || EntityParameters.AutoOpenForm)
-            {
-                if (Manager.ListHandler.ItemCount.Value == 1)
-                {
-                    var data = await Manager.ListHandler.GetDataListAsync();
-                    var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(data[0]);
-                    Manager.SelectedItems.Value = new Dictionary<int, RgfEntityKey> { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
-                }
-                else if (EntityParameters.FormOnly)
-                {
-                    EntityParameters.FormOnly = false;
-                    _logger.LogError("formOnly => ItemCount={ItemCount}", Manager.ListHandler.ItemCount.Value);
-                }
-                if (Manager.SelectedItems.Value.Count == 1)
-                {
-                    await Manager.OnToolbarCommandAsync(new RgfEventArgs<RgfToolbarEventArgs>(this, new(RgfToolbarEventKind.Read)));
-                }
-            }
-            EntityParameters.Manager = Manager;
-            EntityParameters.DisplayMode ??= Enum.TryParse(Manager.EntityDesc.Options.GetStringValue("RGO_DisplayMode"), out RfgDisplayMode mode) ? mode : RfgDisplayMode.Grid;
-            await InitResourcesAsync();
-            _initialized = true;
-            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
-            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
-            _logger.LogDebug("Initialized | EntityName:{EntityName}", EntityParameters.EntityName);
-        }
         else
         {
-            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
-            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+            var success = await ((RgManager)Manager).InitializeAsync(gridRequest);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (success)
+            {
+                EntityParameters.Manager = Manager;
+                if (EntityParameters.FormOnly || EntityParameters.AutoOpenForm)
+                {
+                    if (Manager.ListHandler.ItemCount.Value == 1)
+                    {
+                        var data = await Manager.ListHandler.GetDataListAsync();
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var rowIndexAndKey = Manager.ListHandler.GetRowIndexAndKey(data[0]);
+                        Manager.SelectedItems.Value = new Dictionary<int, RgfEntityKey> { { rowIndexAndKey.Key, rowIndexAndKey.Value } };
+                    }
+                    else if (EntityParameters.FormOnly)
+                    {
+                        EntityParameters.FormOnly = false;
+                        _logger.LogError("formOnly => ItemCount={ItemCount}", Manager.ListHandler.ItemCount.Value);
+                    }
+                    if (Manager.SelectedItems.Value.Count == 1)
+                    {
+                        await Manager.OnToolbarCommandAsync(new RgfEventArgs<RgfToolbarEventArgs>(this, new(RgfToolbarEventKind.Read)));
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                }
+                EntityParameters.DisplayMode ??= Enum.TryParse(Manager.EntityDesc.Options.GetStringValue("RGO_DisplayMode"), out RfgDisplayMode mode) ? mode : RfgDisplayMode.Grid;
+                await InitResourcesAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                _initialized = true;
+
+                var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager);
+                await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _logger.LogDebug("Initialized | EntityName:{EntityName}", EntityParameters.EntityName);
+            }
+            else
+            {
+                var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Destroy, Manager);
+                await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
     }
 
@@ -202,14 +228,22 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         StateHasChanged();
         _ = Task.Run(async () =>
         {
-            if (recreate)
+            try
             {
-                await CreateManagerAsync();
+                if (recreate)
+                {
+                    _createManagerCancellationTokenSource = new CancellationTokenSource();
+                    await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
+                }
+                _initialized = true;
+                var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
+                await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+                StateHasChanged();
             }
-            _initialized = true;
-            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
-            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
-            StateHasChanged();
+            catch (OperationCanceledException)
+            {
+                _logger.LogDebug("OnInitialized | OperationCanceledException | EntityName:{EntityName}", EntityParameters.EntityName);
+            }
         });
     }
 
@@ -236,8 +270,9 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     {
         if (Manager != null)
         {
-            _logger.LogDebug("Dispose Manager | EntityName:{EntityName}", this.EntityName);
+            _logger.LogDebug("Dispose Manager | EntityName:{EntityName} - {HashCode}", this.EntityName, this.GetHashCode());
             EntityParameters?.UnsubscribeFromAll(this);
+            _createManagerCancellationTokenSource?.Cancel();
             Manager.Dispose();
             Manager = null;
         }
