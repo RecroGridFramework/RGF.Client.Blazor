@@ -1,0 +1,30 @@
+﻿@using Recrovit.RecroGridFramework.Abstraction.Contracts.Services
+
+@if (!string.IsNullOrWhiteSpace(_translation))
+{
+    @((MarkupString)_translation)
+}
+
+@code {
+
+    [Parameter, EditorRequired]
+    public string Scope { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string ResourceKey { get; set; } = null!;
+
+    [Parameter]
+    public string? Language { get; set; }
+
+    [Inject]
+    private IRecroDictService RecroDict { get; set; } = null!;
+
+    private string? _translation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _translation = await RecroDict.GetItemAsync(Scope, ResourceKey, Language);
+    }
+}

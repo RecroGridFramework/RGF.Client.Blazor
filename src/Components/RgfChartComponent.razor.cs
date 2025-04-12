@@ -32,7 +32,7 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
 
     private ConcurrentDictionary<string, string> _recroDictChart = [];
 
-    public string GetRecroDictChart(string stringId, string? defaultValue = null) => _recroDict.GetItem(_recroDictChart, stringId, defaultValue);
+    public string GetRecroDictChart(string resourceKey, string? defaultValue = null) => _recroDict.GetItem(_recroDictChart, resourceKey, defaultValue);
 
     public List<RgfDynamicDictionary> DataColumns { get; set; } = [];
 
