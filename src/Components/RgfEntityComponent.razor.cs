@@ -50,6 +50,8 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     public IRgManager? Manager { get; set; }
 
+    public List<IDisposable> Disposables { get; private set; } = [];
+
     private CancellationTokenSource? _createManagerCancellationTokenSource;
 
     private bool _initialized = false;
@@ -115,7 +117,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         Manager = new RgManager(gridRequest, _serviceProvider);
         Manager.RefreshEntity += Refresh;
         Manager.FormViewKey.OnAfterChange(this, OnChangeFormViewKey);
-        Manager.NotificationManager.Subscribe<RgfUserMessageEventArgs>(OnUserMessage);
+        Disposables.Add(Manager.NotificationManager.Subscribe<RgfUserMessageEventArgs>(OnUserMessage));
         EntityParameters.ToolbarParameters.EventDispatcher.Subscribe(
             [RgfToolbarEventKind.Refresh, RgfToolbarEventKind.Add, RgfToolbarEventKind.Edit, RgfToolbarEventKind.Read, RgfToolbarEventKind.Delete, RgfToolbarEventKind.Select],
             Manager.OnToolbarCommandAsync, true);
@@ -249,9 +251,10 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessageEventArgs> args)
     {
-        if (args.Args.Origin == UserMessageOrigin.Global)
+        if (args.Handled != true && args.Args.Origin == UserMessageOrigin.Global)
         {
             _dynamicDialog.Dialog(args.Args);
+            args.Handled = true;
         }
     }
 
@@ -272,6 +275,11 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
         {
             _logger.LogDebug("Dispose Manager | EntityName:{EntityName} - {HashCode}", this.EntityName, this.GetHashCode());
             EntityParameters?.UnsubscribeFromAll(this);
+            if (Disposables != null)
+            {
+                Disposables.ForEach(disposable => disposable.Dispose());
+                Disposables = null!;
+            }
             _createManagerCancellationTokenSource?.Cancel();
             Manager.Dispose();
             Manager = null;
