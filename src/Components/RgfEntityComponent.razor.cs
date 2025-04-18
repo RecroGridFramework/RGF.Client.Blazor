@@ -72,10 +72,10 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
         EntityName = EntityParameters.EntityName;
 
-        _createManagerCancellationTokenSource = new CancellationTokenSource();
         try
         {
-
+            DisposeManager();
+            _createManagerCancellationTokenSource = new CancellationTokenSource();
             await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
         }
         catch (OperationCanceledException)
@@ -234,6 +234,7 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
             {
                 if (recreate)
                 {
+                    DisposeManager();
                     _createManagerCancellationTokenSource = new CancellationTokenSource();
                     await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
                 }
@@ -271,15 +272,21 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
 
     public void Dispose()
     {
+        EntityParameters?.UnsubscribeFromAll(this);
+        if (Disposables != null)
+        {
+            Disposables.ForEach(disposable => disposable.Dispose());
+            Disposables = null!;
+        }
+        DisposeManager();
+    }
+
+    private void DisposeManager()
+    {
         if (Manager != null)
         {
             _logger.LogDebug("Dispose Manager | EntityName:{EntityName} - {HashCode}", this.EntityName, this.GetHashCode());
-            EntityParameters?.UnsubscribeFromAll(this);
-            if (Disposables != null)
-            {
-                Disposables.ForEach(disposable => disposable.Dispose());
-                Disposables = null!;
-            }
+            EntityParameters?.UnsubscribeFromAll(Manager);
             _createManagerCancellationTokenSource?.Cancel();
             Manager.Dispose();
             Manager = null;
