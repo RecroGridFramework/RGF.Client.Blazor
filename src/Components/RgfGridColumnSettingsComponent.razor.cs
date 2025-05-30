@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
-using Recrovit.RecroGridFramework.Abstraction.Extensions;
 using Recrovit.RecroGridFramework.Abstraction.Models;
 using Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 using Recrovit.RecroGridFramework.Client.Events;
@@ -19,11 +18,13 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
     [Inject]
     private IRecroDictService _recroDict { get; set; } = null!;
 
-    public GridColumnSettings[] Columns { get; private set; } = null!;
+    public IEnumerable<RgfGridColumnSettings> Columns { get; private set; } = [];
 
     public RgfDialogParameters DialogParameters { get; set; } = new();
 
     private IRgManager Manager => BaseDataComponent.Manager;
+
+    private RgfEntity? _entityDesc { get; set; }
 
     private RenderFragment? _settingsDialog { get; set; }
 
@@ -35,6 +36,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
         DialogParameters.Title = _recroDict.GetRgfUiString("ColSettings");
         DialogParameters.ShowCloseButton = true;
+        DialogParameters.CssClass = "rgf-dialog-column-settings";
         DialogParameters.ContentTemplate = SettingsTemplate(this);
         if (FooterTemplate != null)
         {
@@ -52,19 +54,20 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
 
     public Task ShowColumnSettingsAsync(IRgfEventArgs<RgfMenuEventArgs> args)
     {
-        Columns = Manager.EntityDesc.Properties
-            .Where(e => e.Readable && e.ListType != PropertyListType.RecroGrid && e.FormType != PropertyFormType.Entity && e.Options?.GetBoolValue("RGO_AggregationRequired") != true)
-            .Select(e => new GridColumnSettings(e))
-            .OrderBy(e => e.ColPos == null)
-            .ThenBy(e => e.ColPos)
-            .ThenBy(e => e.Property.ColTitle)
-            .ToArray();
-
-        int i = 0;
-        while (i < Columns.Length && Columns[i].ColPos > 0)
+        if (!ReferenceEquals(_entityDesc, Manager.EntityDesc))
         {
-            Columns[i].ColPos = ++i;
+            _entityDesc = Manager.EntityDesc;
+            Columns = RgfGridColumnSettings.InitColumnSettings(_entityDesc).ToArray();
+            foreach (var col in Columns)
+            {
+                InitializeExternalSettings(col, null);
+            }
         }
+        else
+        {
+            RgfGridColumnSettings.UpdateColumnSettingsFromProperties(Columns, _entityDesc);
+        }
+        Columns = Columns.OrderBy(e => e.ColPosOrNull ?? int.MaxValue).ThenBy(e => e.PathTitle ?? e.Property.ColTitle).ToArray();
 
         DialogParameters.EventDispatcher.Unsubscribe(this);//We'll reset it in case the dialog might have overwritten it
         DialogParameters.EventDispatcher.Subscribe(RgfDialogEventKind.Close, OnDialogCloseAsync, true);
@@ -79,6 +82,59 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         args.Handled = true;
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    public async Task LoadPropertiesAsync(RgfGridColumnSettings settings, RgfGridColumnSettings? parent)
+    {
+        if (settings.BaseEntity != null)
+        {
+            return;
+        }
+
+        var param = Manager.CreateGridRequest((request) =>
+        {
+            request.EntityName = settings.Property.BaseEntityNameVersion;
+            request.GridId = null;
+        });
+
+        var result = await Manager.GetEntityDescAsync(param);
+        if (result != null)
+        {
+            await Manager.BroadcastMessages(result.Messages, this);
+        }
+
+        if (result?.Success == true)
+        {
+            var path = settings.ExternalSettings?.ExternalPath?.Split('/').ToList() ?? [];
+            settings.BaseEntity = result.Result;
+            settings.RelatedEntityColumnSettings = RgfGridColumnSettings.InitColumnSettings(settings.BaseEntity, true).ToArray();
+            foreach (var col in settings.RelatedEntityColumnSettings)
+            {
+                InitializeExternalSettings(col, settings);
+            }
+            RgfGridColumnSettings.UpdateColumnSettingsFromProperties(Columns, _entityDesc);
+        }
+    }
+
+    private void InitializeExternalSettings(RgfGridColumnSettings settings, RgfGridColumnSettings? parent)
+    {
+        settings.ExternalSettings = new RgfExternalColumnSettings()
+        {
+            ExternalId = settings.Property.Id
+        };
+        if (parent != null)
+        {
+            settings.PathTitle = $"{parent.PathTitle ?? parent.Property.ColTitle} > {settings.Property.ColTitle}";
+            settings.ExternalSettings.ExternalPath = $"{parent.ExternalSettings.ExternalPath}";
+            if (!string.IsNullOrEmpty(settings.Property.BaseEntityPropertyName))
+            {
+                settings.ExternalSettings.ExternalPath += $".{settings.Property.BaseEntityPropertyName}";
+            }
+        }
+        else
+        {
+            settings.ExternalSettings.ExternalPath = settings.Property.BaseEntityPropertyName;
+        }
     }
 
     private Task OnDialogCloseAsync(IRgfEventArgs<RgfDialogEventArgs> args) => CloseDialogAsync();
@@ -100,7 +156,7 @@ public partial class RgfGridColumnSettingsComponent : ComponentBase, IDisposable
         bool changed = await Manager.ListHandler.SetVisibleColumnsAsync(Columns);
         if (changed)
         {
-            var eventArgs = new RgfListEventArgs(RgfListEventKind.ColumnSettingsChanged, BaseDataComponent, properties: Manager.EntityDesc.SortedVisibleColumns);
+            var eventArgs = new RgfListEventArgs(RgfListEventKind.ColumnSettingsChanged, BaseDataComponent, properties: Manager.ListHandler.SortedVisibleColumns);
             await BaseDataComponent.EntityParameters.GridParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfListEventArgs>(this, eventArgs));
         }
     }

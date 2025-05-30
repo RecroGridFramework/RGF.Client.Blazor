@@ -83,11 +83,14 @@ public partial class RgfChartComponent : ComponentBase, IDisposable
             PropertyFormType.DateTime,
             PropertyFormType.StaticText
         };
+
         AllowedProperties = Manager.EntityDesc.Properties
             .Where(p => p.Readable && !p.IsDynamic &&
+                p.Options?.GetStringValue("RGO_AutoExternal") == null &&
                 p.Options?.GetBoolValue("RGO_AggregationExclude") != true &&
                 (validFormTypes.Contains(p.FormType) || p.Options?.GetBoolValue("RGO_AggregationRequired") == true))
-            .OrderBy(e => e.ColTitle).ToArray();
+            .OrderBy(e => e.ColTitle)
+            .ToArray();
 
         ChartSettings.AggregationSettings.Columns = new List<RgfAggregationColumn> { new() { Id = 0, Aggregate = "Count" } };
 

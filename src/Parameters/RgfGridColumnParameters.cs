@@ -5,7 +5,7 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Parameters;
 
 public class RgfGridColumnParameters
 {
-    public RgfGridColumnParameters(RgfDataComponentBase dataComponent, RgfProperty propDesc, RgfDynamicDictionary rowData)
+    public RgfGridColumnParameters(RgfDataComponentBase dataComponent, IRgfProperty propDesc, RgfDynamicDictionary rowData)
     {
         DataComponentBase = dataComponent;
         PropDesc = propDesc;
@@ -14,7 +14,7 @@ public class RgfGridColumnParameters
 
     public RgfDataComponentBase DataComponentBase { get; }
 
-    public RgfProperty PropDesc { get; }
+    public IRgfProperty PropDesc { get; }
 
     public RgfDynamicDictionary RowData { get; }
 }

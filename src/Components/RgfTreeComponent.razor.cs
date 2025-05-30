@@ -53,7 +53,7 @@ public partial class RgfTreeComponent : RgfDataComponentBase
             RowData = rowData,
             AbsoluteRowIndex = absoluteRowIndex,
             EntityParameters = EntityParameters,
-            Property = Manager.EntityDesc.SortedVisibleColumns.FirstOrDefault()
+            Property = Manager.ListHandler.SortedVisibleColumns.FirstOrDefault()
         };
         nodeParameters.Children = [];
         foreach (var prop in this.GridTypeProperties)
