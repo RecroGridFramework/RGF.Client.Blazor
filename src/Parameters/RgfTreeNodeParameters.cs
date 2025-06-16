@@ -10,7 +10,7 @@ public class RgfTreeNodeParameters : IRgfTreeNodeParameters
 
     public RgfDynamicDictionary RowData { get; set; } = [];
 
-    public RgfProperty? Property { get; set; }
+    public IRgfProperty? Property { get; set; }
 
     public bool IsExpanded { get; set; }
 

@@ -219,7 +219,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
         return ColumnSettingsTemplate(this);
     }
 
-    public RenderFragment RenderContentItem(RgfProperty propDesc, RgfDynamicDictionary rowData)
+    public RenderFragment RenderContentItem(IRgfProperty propDesc, RgfDynamicDictionary rowData)
     {
         var param = new RgfGridColumnParameters(this, propDesc, rowData);
         if (EntityParameters.GridParameters.ColumnTemplate != null)
@@ -296,7 +296,7 @@ public class RgfDataComponentBase : ComponentBase, IDisposable
             var entityDesc = Manager.EntityDesc;
             var rgo = new string[] { "RGO_CssClass", "RGO_Style", "RGO_JSRowClass", "RGO_JSRowStyle" };
             var prop4RowStyles = entityDesc.Properties.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
-            var prop4ColStyles = entityDesc.SortedVisibleColumns.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
+            var prop4ColStyles = Manager.ListHandler.SortedVisibleColumns.Where(e => e.Options?.Any(e => rgo.Contains(e.Key)) == true).ToArray();
             foreach (var rowData in args.NewData)
             {
                 CreateAttributes(entityDesc, rowData);
