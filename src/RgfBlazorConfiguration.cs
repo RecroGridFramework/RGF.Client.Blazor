@@ -60,7 +60,7 @@ public class RgfBlazorConfiguration
 
     private static readonly Lazy<string> _version = new Lazy<string>(() => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version);
 
-    internal static readonly Version MinimumRgfCoreVersion = new Version(8, 18, 0);//RGF.Core MinVersion
+    internal static readonly Version MinimumRgfCoreVersion = new Version(10, 0, 0);//RGF.Core MinVersion
 }
 
 public static class RgfBlazorConfigurationExtension
