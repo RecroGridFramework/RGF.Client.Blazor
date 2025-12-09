@@ -55,6 +55,10 @@
     <DocumentationSources>
       <DocumentationSource sourceFile="..\src\RGF.Client.Blazor.csproj" xmlns="" />
     </DocumentationSources>
+    <ApiFilter>
+      <Filter entryType="Namespace" fullName="" isExposed="False" xmlns="" />
+<Filter entryType="Namespace" fullName="Microsoft.CodeAnalysis" isExposed="False" xmlns="" />
+<Filter entryType="Namespace" fullName="Microsoft.Extensions.Validation.Embedded" isExposed="False" xmlns="" /></ApiFilter>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
 			 the build.  The others are optional common platform types that may appear. -->
