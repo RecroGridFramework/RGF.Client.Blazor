@@ -1,14 +1,16 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
-using Recrovit.RecroGridFramework.Abstraction.Infrastructure.API;
 using Recrovit.RecroGridFramework.Client.Blazor.Handlers;
 using Recrovit.RecroGridFramework.Client.Blazor.Services;
+using Recrovit.RecroGridFramework.Client.Handlers;
 using Recrovit.RecroGridFramework.Client.Services;
 using System.Reflection;
 
@@ -16,6 +18,8 @@ namespace Recrovit.RecroGridFramework.Client.Blazor;
 
 public class RgfBlazorConfiguration
 {
+    public static InteractiveWebAssemblyRenderMode InteractiveWebAssemblyWithoutPrerendering => new InteractiveWebAssemblyRenderMode(prerender: false);
+
     internal static Dictionary<string, Type> EntityComponentTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = [];
@@ -67,13 +71,13 @@ public class RgfBlazorConfiguration
 
 public static class RgfBlazorConfigurationExtension
 {
-    [Obsolete("Use AddRgfBlazorWasmServices for Blazor WebAssembly with token handler or AddRgfBlazorServices for host-provided auth without WASM token handler.")]
+    [Obsolete("Use AddRgfBlazorWasmBearerServices for Blazor WebAssembly with bearer tokens.")]
     public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null) =>
-        services.AddRgfBlazorWasmServices(configuration, logger, authorizationMessageHandlerType);
+        services.AddRgfBlazorWasmBearerServices(configuration, logger, authorizationMessageHandlerType);
 
-    public static IServiceCollection AddRgfBlazorWasmServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null)
+    public static IServiceCollection AddRgfBlazorWasmBearerServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null)
     {
-        AddRgfBlazorServicesCore(services, configuration, logger);
+        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.WasmBearer);
         services.AddScoped<IRgfAccessTokenAccessor, WasmRgfAccessTokenAccessor>();
         ConfigureWasmAuthHttpClient(services, authorizationMessageHandlerType, logger);
         return services;
@@ -87,7 +91,7 @@ public static class RgfBlazorConfigurationExtension
             authorizationMessageHandlerType = typeof(RgfAuthorizationMessageHandler);
         }
 
-        logger?.LogInformation("RecroGrid Framework Blazor auth mode: WASM token auth with handler '{AuthorizationMessageHandlerTypeName}'.", authorizationMessageHandlerType.Name);
+        logger?.LogInformation("RecroGrid Framework Blazor registration: WebAssembly bearer auth with handler '{AuthorizationMessageHandlerTypeName}'.", authorizationMessageHandlerType.Name);
 
         services.Configure<HttpClientFactoryOptions>(ApiService.RgfAuthApiClientName, httpClientOptions =>
         {
@@ -98,16 +102,39 @@ public static class RgfBlazorConfigurationExtension
         });
     }
 
-    public static IServiceCollection AddRgfBlazorHostServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null)
+    public static IServiceCollection AddRgfBlazorWithoutAuthServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null)
     {
-        AddRgfBlazorServicesCore(services, configuration, logger);
-        logger?.LogInformation("RecroGrid Framework Blazor auth mode: host-provided auth without WASM token handler.");
+        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.None);
+        logger?.LogInformation("RecroGrid Framework Blazor registration: without built-in authentication handling.");
         return services;
     }
 
-    private static IServiceCollection AddRgfBlazorServicesCore(IServiceCollection services, IConfiguration configuration, ILogger? logger)
+    public static IServiceCollection AddRgfBlazorServerProxyClientServices(this IServiceCollection services, IConfiguration configuration, string browserBaseAddress, ILogger? logger = null)
     {
-        services.AddRgfServices(configuration, logger);
+        services.AddAuthorizationCore();
+        services.AddCascadingAuthenticationState();
+        services.AddAuthenticationStateDeserialization();
+
+        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.ServerProxy, browserBaseAddress);
+        logger?.LogInformation("RecroGrid Framework Blazor registration: client server-proxy auth via host '{BrowserBaseAddress}'.", browserBaseAddress);
+        return services;
+    }
+
+    public static IServiceCollection AddRgfBlazorServerProxySsrServices(this IServiceCollection services, IConfiguration configuration, string browserBaseAddress, ILogger? logger = null)
+    {
+        services.TryAddScoped<IRgfServerRequestCookieAccessor, NoOpRgfServerRequestCookieAccessor>();
+        services.AddTransient<RgfServerProxyAuthCookieHandler>();
+
+        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.ServerProxySsr, browserBaseAddress);
+        ConfigureServerProxySsrHttpClients(services, logger);
+        logger?.LogInformation("RecroGrid Framework Blazor registration: SSR server-proxy auth via host '{BrowserBaseAddress}'.", browserBaseAddress);
+        return services;
+    }
+
+    private static IServiceCollection AddRgfBlazorServicesCore(IServiceCollection services, IConfiguration configuration, ILogger? logger,
+        RgfApiAuthMode authMode, string? browserBaseAddress = null)
+    {
+        services.AddRgfServices(configuration, logger, authMode, browserBaseAddress);
 
         if (RgfClientConfiguration.ClientVersions.TryAdd(RgfHeaderKeys.RgfClientBlazorVersion, RgfBlazorConfiguration.Version))
         {
@@ -120,6 +147,22 @@ public static class RgfBlazorConfigurationExtension
         }
 
         return services;
+    }
+
+    private static void ConfigureServerProxySsrHttpClients(IServiceCollection services, ILogger? logger)
+    {
+        logger?.LogInformation("RecroGrid Framework Blazor registration: SSR server-proxy handler '{AuthorizationMessageHandlerTypeName}' attached to RGF HTTP clients.", nameof(RgfServerProxyAuthCookieHandler));
+
+        foreach (var clientName in new[] { ApiService.RgfApiClientName, ApiService.RgfAuthApiClientName })
+        {
+            services.Configure<HttpClientFactoryOptions>(clientName, httpClientOptions =>
+            {
+                httpClientOptions.HttpMessageHandlerBuilderActions.Add(builder =>
+                {
+                    builder.AdditionalHandlers.Add(builder.Services.GetRequiredService<RgfServerProxyAuthCookieHandler>());
+                });
+            });
+        }
     }
 
     public static Task InitializeRgfBlazorServerAsync(this IServiceProvider serviceProvider) => serviceProvider.InitializeRgfBlazorAsync(false);

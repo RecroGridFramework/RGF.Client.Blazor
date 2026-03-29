@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
-using Recrovit.RecroGridFramework.Abstraction.Infrastructure.API;
+using Recrovit.RecroGridFramework.Client.Handlers;
 
 namespace Recrovit.RecroGridFramework.Client.Blazor.Services;
 
