@@ -413,7 +413,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
             FormData = formData;
             if (!string.IsNullOrEmpty(FormData.StyleSheetUrl) && Manager.EntityDesc.Options.GetBoolValue("RGO_LegacyFormTemplate") != true)
             {
-                await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", Services.ApiService.BaseAddress + FormData.StyleSheetUrl);
+                await JsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", Client.Services.ApiService.BaseAddress + FormData.StyleSheetUrl);
             }
             CurrentEditContext = new(FormData.DataRec);
             var eventArg = new RgfEventArgs<RgfFormEventArgs>(this, new RgfFormEventArgs(RgfFormEventKind.FormDataInitialized, this));
@@ -552,7 +552,7 @@ public partial class RgfFormComponent : ComponentBase, IDisposable
         }
         if (!string.IsNullOrEmpty(FormData.StyleSheetUrl))
         {
-            JsRuntime.InvokeVoidAsync("Recrovit.LPUtils.RemoveLinkedFile", Services.ApiService.BaseAddress + FormData.StyleSheetUrl, "stylesheet");
+            JsRuntime.InvokeVoidAsync("Recrovit.LPUtils.RemoveLinkedFile", Client.Services.ApiService.BaseAddress + FormData.StyleSheetUrl, "stylesheet");
         }
         if (FormHandler != null)
         {

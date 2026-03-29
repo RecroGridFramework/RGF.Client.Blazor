@@ -6,7 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Constants;
 using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+using Recrovit.RecroGridFramework.Abstraction.Infrastructure.API;
 using Recrovit.RecroGridFramework.Client.Blazor.Handlers;
+using Recrovit.RecroGridFramework.Client.Blazor.Services;
 using Recrovit.RecroGridFramework.Client.Services;
 using System.Reflection;
 
@@ -65,26 +67,47 @@ public class RgfBlazorConfiguration
 
 public static class RgfBlazorConfigurationExtension
 {
-    public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null)
+    [Obsolete("Use AddRgfBlazorWasmServices for Blazor WebAssembly with token handler or AddRgfBlazorServices for host-provided auth without WASM token handler.")]
+    public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null) =>
+        services.AddRgfBlazorWasmServices(configuration, logger, authorizationMessageHandlerType);
+
+    public static IServiceCollection AddRgfBlazorWasmServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null)
+    {
+        AddRgfBlazorServicesCore(services, configuration, logger);
+        services.AddScoped<IRgfAccessTokenAccessor, WasmRgfAccessTokenAccessor>();
+        ConfigureWasmAuthHttpClient(services, authorizationMessageHandlerType, logger);
+        return services;
+    }
+
+    private static void ConfigureWasmAuthHttpClient(IServiceCollection services, Type? authorizationMessageHandlerType, ILogger? logger)
+    {
+        if (authorizationMessageHandlerType == null || !typeof(DelegatingHandler).IsAssignableFrom(authorizationMessageHandlerType))
+        {
+            services.AddTransient<RgfAuthorizationMessageHandler>();
+            authorizationMessageHandlerType = typeof(RgfAuthorizationMessageHandler);
+        }
+
+        logger?.LogInformation("RecroGrid Framework Blazor auth mode: WASM token auth with handler '{AuthorizationMessageHandlerTypeName}'.", authorizationMessageHandlerType.Name);
+
+        services.Configure<HttpClientFactoryOptions>(ApiService.RgfAuthApiClientName, httpClientOptions =>
+        {
+            httpClientOptions.HttpMessageHandlerBuilderActions.Add(builder =>
+            {
+                builder.AdditionalHandlers.Add((DelegatingHandler)builder.Services.GetRequiredService(authorizationMessageHandlerType));
+            });
+        });
+    }
+
+    public static IServiceCollection AddRgfBlazorHostServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null)
+    {
+        AddRgfBlazorServicesCore(services, configuration, logger);
+        logger?.LogInformation("RecroGrid Framework Blazor auth mode: host-provided auth without WASM token handler.");
+        return services;
+    }
+
+    private static IServiceCollection AddRgfBlazorServicesCore(IServiceCollection services, IConfiguration configuration, ILogger? logger)
     {
         services.AddRgfServices(configuration, logger);
-
-        var httpClientBuilder = services.AddHttpClient(ApiService.RgfAuthApiClientName, httpClient => httpClient.BaseAddress = new Uri(ApiService.BaseAddress));
-
-        var config = configuration.GetSection("Recrovit:RecroGridFramework");
-        if (config.GetSection("API:DefaultScopes").Get<string[]>() != null)
-        {
-            if (authorizationMessageHandlerType == null || !typeof(DelegatingHandler).IsAssignableFrom(authorizationMessageHandlerType))
-            {
-                services.AddTransient<RgfAuthorizationMessageHandler>();
-                authorizationMessageHandlerType = typeof(RgfAuthorizationMessageHandler);
-            }
-            logger?.LogInformation("Initializing AuthorizationMessageHandler for RecroGrid Framework API with type '{AuthorizationMessageHandlerTypeName}'.", authorizationMessageHandlerType.Name);
-            httpClientBuilder.Services.Configure<HttpClientFactoryOptions>(httpClientBuilder.Name, options =>
-            {
-                options.HttpMessageHandlerBuilderActions.Add(b => b.AdditionalHandlers.Add((DelegatingHandler)b.Services.GetRequiredService(authorizationMessageHandlerType)));
-            });
-        }
 
         if (RgfClientConfiguration.ClientVersions.TryAdd(RgfHeaderKeys.RgfClientBlazorVersion, RgfBlazorConfiguration.Version))
         {
