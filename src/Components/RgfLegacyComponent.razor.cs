@@ -96,7 +96,7 @@ public partial class RgfLegacyComponent : ComponentBase, IAsyncDisposable
 #endif
                 );
         }
-        await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/lib/jqueryui/themes/base/jquery-ui.min.css", false, null, null, "rgf-legacy");
+        await _jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.AddStyleSheetLink", RgfBlazorConfigurationExtension.GetJQueryUiCssHref(), false, null, null, "rgf-legacy");
         foreach (var item in StylesheetsReferences)
         {
             await _jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", ApiService.BaseAddress + item, false, null, null, "rgf-legacy");

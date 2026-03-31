@@ -71,6 +71,8 @@ public class RgfBlazorConfiguration
 
 public static class RgfBlazorConfigurationExtension
 {
+    private static readonly string _blazorAssemblyName = Assembly.GetExecutingAssembly().GetName().Name!;
+
     [Obsolete("Use AddRgfBlazorWasmBearerServices for Blazor WebAssembly with bearer tokens.")]
     public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null) =>
         services.AddRgfBlazorWasmBearerServices(configuration, logger, authorizationMessageHandlerType);
@@ -181,12 +183,11 @@ public static class RgfBlazorConfigurationExtension
     public static async Task LoadResourcesAsync(IServiceProvider serviceProvider)
     {
         var jsRuntime = serviceProvider.GetRequiredService<IJSRuntime>();
-        var libName = Assembly.GetExecutingAssembly().GetName().Name;
 
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery != 'undefined'");
         if (!jquery)
         {
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/lib/jquery/jquery.min.js");
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/lib/jquery/jquery.min.js");
         }
 
         if (!SriptReferences.Any())
@@ -202,7 +203,7 @@ public static class RgfBlazorConfigurationExtension
                 }
                 await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
             }
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/scripts/" +
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/scripts/" +
 #if DEBUG
                 "recrovit-rgf-blazor.js"
 #else
@@ -210,14 +211,22 @@ public static class RgfBlazorConfigurationExtension
 #endif
                 );
 
-            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css");
+            // Compatibility fallback for hosts that haven't adopted RgfBlazorRootComponent yet.
+            await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", GetRgfCoreCssHref(), false, RgfCoreCssId);
         }
 
+        // Compatibility fallback for hosts that haven't adopted RgfBlazorRootComponent yet.
         await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-wrapper-comp=\"\">",
-            $"{RgfClientConfiguration.AppRootPath}/_content/{libName}/{libName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}", BlazorCssLib);
+            GetBundleCssHref(), BlazorCssLib);
     }
 
-    private static readonly string BlazorCssLib = "rgf-client-blazor-lib";
+    public const string RgfCoreCssId = "rgf-core-css";
+
+    public const string BlazorCssLib = "rgf-client-blazor-lib";
+
+    public static string GetRgfCoreCssHref() => $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css";
+
+    public static string GetBundleCssHref() => $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/{_blazorAssemblyName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}";
 
     public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }
