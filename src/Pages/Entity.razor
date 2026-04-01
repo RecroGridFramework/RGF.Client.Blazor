@@ -35,9 +35,9 @@
         if (!string.IsNullOrEmpty(EntityName))
         {
             var entityParameters = new RgfEntityParameters(EntityName)
-                {
-                    Language = _recroSec.UserLanguage,
-                    TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>)
+            {
+                Language = _recroSec.UserLanguage,
+                TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>)
             };
             _entity = RgfEntityComponent.Create(entityParameters);
         }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,8 +17,6 @@ namespace Recrovit.RecroGridFramework.Client.Blazor;
 
 public class RgfBlazorConfiguration
 {
-    public static InteractiveWebAssemblyRenderMode InteractiveWebAssemblyWithoutPrerendering => new InteractiveWebAssemblyRenderMode(prerender: false);
-
     internal static Dictionary<string, Type> EntityComponentTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     internal static Dictionary<ComponentType, Type> ComponentTypes { get; } = [];
@@ -71,7 +68,7 @@ public class RgfBlazorConfiguration
 
 public static class RgfBlazorConfigurationExtension
 {
-    private static readonly string _blazorAssemblyName = Assembly.GetExecutingAssembly().GetName().Name!;
+    private static readonly string _executingAssemblyName = Assembly.GetExecutingAssembly().GetName().Name!;
 
     [Obsolete("Use AddRgfBlazorWasmBearerServices for Blazor WebAssembly with bearer tokens.")]
     public static IServiceCollection AddRgfBlazorServices(this IServiceCollection services, IConfiguration configuration, ILogger? logger = null, Type? authorizationMessageHandlerType = null) =>
@@ -113,11 +110,13 @@ public static class RgfBlazorConfigurationExtension
 
     public static IServiceCollection AddRgfBlazorServerProxyClientServices(this IServiceCollection services, IConfiguration configuration, string browserBaseAddress, ILogger? logger = null)
     {
+        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.ServerProxy, browserBaseAddress);
         services.AddAuthorizationCore();
         services.AddCascadingAuthenticationState();
         services.AddAuthenticationStateDeserialization();
-
-        AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.ServerProxy, browserBaseAddress);
+        services.AddSingleton<IRgfAuthenticationSessionMonitor, RgfAuthenticationSessionMonitor>();
+        services.AddSingleton<IRgfAuthenticationFailureHandler>(serviceProvider => serviceProvider.GetRequiredService<IRgfAuthenticationSessionMonitor>());
+        services.DecorateAuthenticationStateProvider();
         logger?.LogInformation("RecroGrid Framework Blazor registration: client server-proxy auth via host '{BrowserBaseAddress}'.", browserBaseAddress);
         return services;
     }
@@ -126,6 +125,7 @@ public static class RgfBlazorConfigurationExtension
     {
         services.TryAddScoped<IRgfServerRequestCookieAccessor, NoOpRgfServerRequestCookieAccessor>();
         services.AddTransient<RgfServerProxyAuthCookieHandler>();
+        services.TryAddSingleton<IRgfAuthenticationSessionMonitor, NoOpRgfAuthenticationSessionMonitor>();
 
         AddRgfBlazorServicesCore(services, configuration, logger, RgfApiAuthMode.ServerProxySsr, browserBaseAddress);
         ConfigureServerProxySsrHttpClients(services, logger);
@@ -137,6 +137,7 @@ public static class RgfBlazorConfigurationExtension
         RgfApiAuthMode authMode, string? browserBaseAddress = null)
     {
         services.AddRgfServices(configuration, logger, authMode, browserBaseAddress);
+        services.TryAddSingleton<RgfAuthenticationEndpointResolver>();
 
         if (RgfClientConfiguration.ClientVersions.TryAdd(RgfHeaderKeys.RgfClientBlazorVersion, RgfBlazorConfiguration.Version))
         {
@@ -174,6 +175,14 @@ public static class RgfBlazorConfigurationExtension
         await serviceProvider.InitializeRgfClientAsync(clientSideRendering);
         if (clientSideRendering)
         {
+            var authenticationSessionMonitor = serviceProvider.GetService<IRgfAuthenticationSessionMonitor>();
+            if (authenticationSessionMonitor != null)
+            {
+                await authenticationSessionMonitor.ProbeAsync(CancellationToken.None);
+            }
+        }
+        if (clientSideRendering)
+        {
             await LoadResourcesAsync(serviceProvider);
         }
         var logger = serviceProvider.GetRequiredService<ILogger<RgfBlazorConfiguration>>();
@@ -187,7 +196,7 @@ public static class RgfBlazorConfigurationExtension
         bool jquery = await jsRuntime.InvokeAsync<bool>("eval", "typeof jQuery != 'undefined'");
         if (!jquery)
         {
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/lib/jquery/jquery.min.js");
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_executingAssemblyName}/lib/jquery/jquery.min.js");
         }
 
         if (!SriptReferences.Any())
@@ -203,7 +212,7 @@ public static class RgfBlazorConfigurationExtension
                 }
                 await jsRuntime.InvokeVoidAsync($"Recrovit.WebCli.SetBaseAddress", ApiService.BaseAddress);
             }
-            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/scripts/" +
+            await jsRuntime.InvokeAsync<IJSObjectReference>("import", $"{RgfClientConfiguration.AppRootPath}/_content/{_executingAssemblyName}/scripts/" +
 #if DEBUG
                 "recrovit-rgf-blazor.js"
 #else
@@ -211,12 +220,10 @@ public static class RgfBlazorConfigurationExtension
 #endif
                 );
 
-            // Compatibility fallback for hosts that haven't adopted RgfBlazorRootComponent yet.
             await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.AddStyleSheetLink", GetRgfCoreCssHref(), false, RgfCoreCssId);
         }
 
-        // Compatibility fallback for hosts that haven't adopted RgfBlazorRootComponent yet.
-        await jsRuntime.InvokeVoidAsync("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-wrapper-comp=\"\">",
+        await jsRuntime.InvokeAsync<bool>("Recrovit.LPUtils.EnsureStyleSheetLoaded", "rgf-check-stylesheet-client-blazor", "<div class=\"rgf-check-stylesheet-client-blazor\" rgf-wrapper-comp=\"\">",
             GetBundleCssHref(), BlazorCssLib);
     }
 
@@ -226,7 +233,9 @@ public static class RgfBlazorConfigurationExtension
 
     public static string GetRgfCoreCssHref() => $"{ApiService.BaseAddress}/rgf/resource/RgfCore.css";
 
-    public static string GetBundleCssHref() => $"{RgfClientConfiguration.AppRootPath}/_content/{_blazorAssemblyName}/{_blazorAssemblyName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}";
+    public static string GetBundleCssHref() => $"{RgfClientConfiguration.AppRootPath}/_content/{_executingAssemblyName}/{_executingAssemblyName}.bundle.scp.css?v={RgfBlazorConfiguration.Version}";
+
+    public static string GetJQueryUiCssHref() => $"{RgfClientConfiguration.AppRootPath}/_content/{_executingAssemblyName}/lib/jqueryui/themes/base/jquery-ui.min.css";
 
     public static IEnumerable<string> SriptReferences { get; private set; } = [];
 }

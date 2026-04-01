@@ -54,7 +54,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Components\RgfComponentWrapper.razor.css" CssScope="rgf-wrapper-comp" />
     <None Update="Components\RgfGridComponent.razor.css" CssScope="rgf-grid-comp" />
   </ItemGroup>
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Recrovit.RecroGridFramework.Client.Blazor.Services;
 using Recrovit.RecroGridFramework.Client.Services;
 using System.Net;
 
@@ -9,17 +10,22 @@ namespace Recrovit.RecroGridFramework.Client.Blazor.Handlers;
 
 public class RgfAuthorizationMessageHandler : AuthorizationMessageHandler
 {
-    public static string LoginPath { get; set; } = RemoteAuthenticationDefaults.LoginPath;
-
     private static string? _authorizedUrls;
     private static string[]? _scopes;
     private readonly ILogger<RgfAuthorizationMessageHandler> _logger;
     private readonly NavigationManager _navigation;
+    private readonly RgfAuthenticationEndpointResolver _authenticationEndpoints;
 
-    public RgfAuthorizationMessageHandler(ILogger<RgfAuthorizationMessageHandler> logger, IConfiguration configuration, IAccessTokenProvider provider, NavigationManager navigation) : base(provider, navigation)
+    public RgfAuthorizationMessageHandler(
+        ILogger<RgfAuthorizationMessageHandler> logger,
+        IConfiguration configuration,
+        IAccessTokenProvider provider,
+        NavigationManager navigation,
+        RgfAuthenticationEndpointResolver authenticationEndpoints) : base(provider, navigation)
     {
         _logger = logger;
         _navigation = navigation;
+        _authenticationEndpoints = authenticationEndpoints;
         if (_authorizedUrls == null)
         {
             _authorizedUrls = ApiService.BaseAddress;
@@ -34,7 +40,7 @@ public class RgfAuthorizationMessageHandler : AuthorizationMessageHandler
         _logger.LogDebug("AccessTokenNotAvailableException => Redirect");
         ex.Redirect((e) =>
         {
-            _navigation.NavigateToLogin(LoginPath, new InteractiveRequestOptions()
+            _navigation.NavigateToLogin(_authenticationEndpoints.LoginPath, new InteractiveRequestOptions()
             {
                 Interaction = InteractionType.SignIn,
                 ReturnUrl = _navigation.Uri
