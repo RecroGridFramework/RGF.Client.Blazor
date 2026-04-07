@@ -1,47 +1,49 @@
 ﻿@if (_initialized && Manager != null)
 {
-    if (!EntityParameters.FormOnly)
-    {
-        if (EntityParameters.TitleTemplate != null)
+    <RgfComponentWrapper @key="Manager.EntityDomId">
+        @if (!EntityParameters.FormOnly)
         {
-            @EntityParameters.TitleTemplate(Manager)
-        }
-        <div id="@Manager.EntityDomId"
-        class="@($"recro-grid recro-grid-base{(EntityParameters.DisplayMode == RfgDisplayMode.Tree ? " rg-tree" : "")} rg-ent-{Manager.EntityDesc.EntityId}")"
-        style="width:fit-content">
-            @if (!string.IsNullOrEmpty(Manager.EntityDesc.CRUD))
+            if (EntityParameters.TitleTemplate != null)
             {
-                @ToolbarTemplate(EntityParameters)
-                if (EntityParameters.DisplayMode == RfgDisplayMode.Tree && TreeTemplate != null)
+                @EntityParameters.TitleTemplate(Manager)
+            }
+            <div id="@Manager.EntityDomId"
+                 class="@($"recro-grid recro-grid-base{(EntityParameters.DisplayMode == RfgDisplayMode.Tree ? " rg-tree" : "")} rg-ent-{Manager.EntityDesc.EntityId}")"
+                 style="width:fit-content">
+                @if (!string.IsNullOrEmpty(Manager.EntityDesc.CRUD))
                 {
-                    @TreeTemplate(EntityParameters)
+                    @ToolbarTemplate(EntityParameters)
+                    if (EntityParameters.DisplayMode == RfgDisplayMode.Tree && TreeTemplate != null)
+                    {
+                        @TreeTemplate(EntityParameters)
+                    }
+                    else
+                    {
+                        EntityParameters.DisplayMode = RfgDisplayMode.Grid;
+                        @GridTemplate(EntityParameters)
+                    }
+                    @PagerTemplate(EntityParameters)
+                    @FilterTemplate(EntityParameters)
                 }
                 else
                 {
-                    EntityParameters.DisplayMode = RfgDisplayMode.Grid;
-                    @GridTemplate(EntityParameters)
+                    @_recroDict.GetRgfUiString("AccessDenied")
                 }
-                @PagerTemplate(EntityParameters)
-                @FilterTemplate(EntityParameters)
-            }
-            else
-            {
-                @_recroDict.GetRgfUiString("AccessDenied")
-            }
-        </div>
-    }
-    if (_showFormView)
-    {
-        @FormTemplate(EntityParameters)
-    }
-    if (_isChartInitialized && ChartTemplate != null)
-    {
-        @ChartTemplate(EntityParameters)
-    }
-    if (_entityEditor != null)
-    {
-        @_entityEditor
-    }
+            </div>
+        }
+        @if (_showFormView)
+        {
+            @FormTemplate(EntityParameters)
+        }
+        @if (_isChartInitialized && ChartTemplate != null)
+        {
+            @ChartTemplate(EntityParameters)
+        }
+        @if (_entityEditor != null)
+        {
+            @_entityEditor
+        }
+    </RgfComponentWrapper>
 }
 else if (LoadingIndicator != null && !EntityParameters.DeferredInitialization)
 {

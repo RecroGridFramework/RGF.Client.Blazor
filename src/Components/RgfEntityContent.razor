@@ -1,0 +1,65 @@
+﻿@using Recrovit.RecroGridFramework.Abstraction.Contracts.Services;
+
+@if (_entity != null)
+{
+    @_entity
+}
+
+@inject IRecroSecService _recroSec
+@inject NavigationManager Navigation
+
+@code {
+
+    public enum RgfEntityPageMode
+    {
+        Entity,
+        Legacy,
+    }
+
+    [Parameter]
+    public string? EntityName { get; set; }
+
+    [Parameter]
+    public RgfEntityPageMode Mode { get; set; } = RgfEntityPageMode.Entity;
+
+    private RenderFragment? _entity { get; set; }
+
+    private string? _uri { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (_uri != Navigation.Uri)
+        {
+            _uri = Navigation.Uri;
+            InitEntityParameters();
+        }
+    }
+
+    private void InitEntityParameters()
+    {
+        if (string.IsNullOrEmpty(EntityName))
+        {
+            _entity = null;
+            return;
+        }
+
+        var entityParameters = new RgfEntityParameters(EntityName)
+        {
+            Language = _recroSec.UserLanguage
+        };
+
+        _entity = Mode switch
+        {
+            RgfEntityPageMode.Entity => CreateEntityComponent(entityParameters),
+            RgfEntityPageMode.Legacy => @<RgfLegacyComponent EntityParameters="@entityParameters" />,
+            _ => null
+        };
+    }
+
+    private static RenderFragment CreateEntityComponent(RgfEntityParameters entityParameters)
+    {
+        entityParameters.TitleTemplate = (context) => (@<h4>@context.EntityDesc?.MenuTitle</h4>);
+        return RgfEntityComponent.Create(entityParameters);
+    }
+}

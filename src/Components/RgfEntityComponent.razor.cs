@@ -226,28 +226,30 @@ public partial class RgfEntityComponent : ComponentBase, IDisposable
     private void Refresh(bool recreate)
     {
         _logger.LogDebug("Refresh | EntityName:{EntityName}", EntityParameters.EntityName);
+        _ = InvokeAsync(() => RefreshAsync(recreate));
+    }
+
+    private async Task RefreshAsync(bool recreate)
+    {
         _initialized = false;
         StateHasChanged();
-        _ = Task.Run(async () =>
+        try
         {
-            try
+            if (recreate)
             {
-                if (recreate)
-                {
-                    DisposeManager();
-                    _createManagerCancellationTokenSource = new CancellationTokenSource();
-                    await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
-                }
-                _initialized = true;
-                var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
-                await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
-                StateHasChanged();
+                DisposeManager();
+                _createManagerCancellationTokenSource = new CancellationTokenSource();
+                await CreateManagerAsync(_createManagerCancellationTokenSource.Token);
             }
-            catch (OperationCanceledException)
-            {
-                _logger.LogDebug("OnInitialized | OperationCanceledException | EntityName:{EntityName}", EntityParameters.EntityName);
-            }
-        });
+            _initialized = true;
+            var eventArgs = new RgfEntityEventArgs(RgfEntityEventKind.Initialized, Manager!);
+            await EntityParameters.EventDispatcher.DispatchEventAsync(eventArgs.EventKind, new RgfEventArgs<RgfEntityEventArgs>(this, eventArgs));
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("OnInitialized | OperationCanceledException | EntityName:{EntityName}", EntityParameters.EntityName);
+        }
     }
 
     protected virtual void OnUserMessage(IRgfEventArgs<RgfUserMessageEventArgs> args)

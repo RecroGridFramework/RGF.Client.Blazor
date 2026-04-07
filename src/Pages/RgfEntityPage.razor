@@ -1,0 +1,20 @@
+﻿@page "/rgf/entity/{EntityName}"
+@page "/rgf/admin/{EntityName?}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@* @attribute [RecrovitPageRoute(RecrovitRouteMode.ClientOnly, LayoutType = typeof(MainLayout))] *@
+
+@using Recrovit.RecroGridFramework.Client.Blazor.Components;
+
+<RgfEntityContent EntityName="@EntityName" Mode="@PageMode" />
+
+@inject NavigationManager Navigation
+@code {
+
+    [Parameter]
+    public string? EntityName { get; set; }
+
+    private RgfEntityContent.RgfEntityPageMode PageMode =>
+        Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("rgf/admin", StringComparison.OrdinalIgnoreCase)
+            ? RgfEntityContent.RgfEntityPageMode.Legacy
+            : RgfEntityContent.RgfEntityPageMode.Entity;
+}
