@@ -115,6 +115,7 @@ public static class RgfBlazorConfigurationExtension
         services.AddCascadingAuthenticationState();
         services.AddAuthenticationStateDeserialization();
         services.AddSingleton<IRgfAuthenticationSessionMonitor, RgfAuthenticationSessionMonitor>();
+        services.AddSingleton<RgfAuthenticationPrincipalSnapshotSynchronizer>();
         services.AddSingleton<IRgfAuthenticationFailureHandler>(serviceProvider => serviceProvider.GetRequiredService<IRgfAuthenticationSessionMonitor>());
         services.DecorateAuthenticationStateProvider();
         logger?.LogInformation("RecroGrid Framework Blazor registration: client server-proxy auth via host '{BrowserBaseAddress}'.", browserBaseAddress);

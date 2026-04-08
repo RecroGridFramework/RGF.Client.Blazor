@@ -20,7 +20,8 @@ internal static class RgfAuthenticationStateProviderDecorator
         {
             return new RgfSessionAwareAuthenticationStateProvider(
                 serviceProvider.GetRequiredService<RgfInnerAuthenticationStateProviderHolder>().Provider,
-                serviceProvider.GetRequiredService<IRgfAuthenticationSessionMonitor>());
+                serviceProvider.GetRequiredService<IRgfAuthenticationSessionMonitor>(),
+                serviceProvider.GetRequiredService<RgfAuthenticationPrincipalSnapshotSynchronizer>());
         }, descriptor.Lifetime));
 
         return services;

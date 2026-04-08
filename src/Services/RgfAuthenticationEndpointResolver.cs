@@ -14,6 +14,8 @@ public sealed class RgfAuthenticationEndpointResolver(IConfiguration configurati
 
     public string SessionPath => $"{BasePath}/session";
 
+    public string PrincipalPath => $"{BasePath}/principal";
+
     private static string NormalizeBasePath(string? configuredPath)
     {
         if (string.IsNullOrWhiteSpace(configuredPath))

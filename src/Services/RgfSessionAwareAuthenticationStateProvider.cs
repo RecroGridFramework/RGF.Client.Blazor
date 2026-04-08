@@ -8,11 +8,17 @@ internal sealed class RgfSessionAwareAuthenticationStateProvider : Authenticatio
 
     private readonly AuthenticationStateProvider _innerProvider;
     private readonly IRgfAuthenticationSessionMonitor _sessionMonitor;
+    private readonly RgfAuthenticationPrincipalSnapshotSynchronizer _principalSnapshotSynchronizer;
 
-    public RgfSessionAwareAuthenticationStateProvider(AuthenticationStateProvider innerProvider, IRgfAuthenticationSessionMonitor sessionMonitor)
+    public RgfSessionAwareAuthenticationStateProvider(
+        AuthenticationStateProvider innerProvider,
+        IRgfAuthenticationSessionMonitor sessionMonitor,
+        RgfAuthenticationPrincipalSnapshotSynchronizer principalSnapshotSynchronizer)
     {
         _innerProvider = innerProvider;
         _sessionMonitor = sessionMonitor;
+        _principalSnapshotSynchronizer = principalSnapshotSynchronizer;
+        _principalSnapshotSynchronizer.Initialize();
         _innerProvider.AuthenticationStateChanged += OnInnerAuthenticationStateChanged;
         _sessionMonitor.SessionStateChanged += OnSessionStateChanged;
     }
@@ -20,7 +26,12 @@ internal sealed class RgfSessionAwareAuthenticationStateProvider : Authenticatio
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         var state = await _innerProvider.GetAuthenticationStateAsync();
-        return _sessionMonitor.HasValidSession ? state : AnonymousState;
+        if (!_sessionMonitor.HasValidSession)
+        {
+            return AnonymousState;
+        }
+
+        return await _principalSnapshotSynchronizer.SynchronizeAsync(state);
     }
 
     public void Dispose()
@@ -36,6 +47,13 @@ internal sealed class RgfSessionAwareAuthenticationStateProvider : Authenticatio
     private async Task<AuthenticationState> WrapStateAsync(Task<AuthenticationState> stateTask)
     {
         var state = await stateTask;
-        return _sessionMonitor.HasValidSession ? state : AnonymousState;
+        _principalSnapshotSynchronizer.Clear();
+
+        if (!_sessionMonitor.HasValidSession)
+        {
+            return AnonymousState;
+        }
+
+        return await _principalSnapshotSynchronizer.SynchronizeAsync(state);
     }
 }
