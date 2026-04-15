@@ -1,5 +1,12 @@
-# RecroGrid Framework Client Blazor
+# Archived
 
-[![NuGet Version](https://img.shields.io/nuget/v/Recrovit.RecroGridFramework.Client.Blazor.svg?label=RGF.Client.Blazor)](https://www.nuget.org/packages/Recrovit.RecroGridFramework.Client.Blazor/) [![NuGet Version](https://img.shields.io/nuget/v/Recrovit.RecroGridFramework.Core.svg?label=RGF.Core)](https://www.nuget.org/packages/Recrovit.RecroGridFramework.Core/) [![NuGet Version](https://img.shields.io/nuget/v/RecroGrid.svg?label=RecroGrid)](https://www.nuget.org/packages/RecroGrid/) ![NuGet Downloads](https://img.shields.io/nuget/dt/RecroGrid)
+This repository has been merged into [Recrovit/rgf-client](https://github.com/Recrovit/rgf-client).
 
-Official Website: [RecroGrid Framework](https://RecroGridFramework.com)
+This repository is no longer maintained.
+Please use the new repository for issues, pull requests, and source code.
+
+## Recrovit.RecroGridFramework.Client.Blazor
+
+[![NuGet Version](https://img.shields.io/nuget/v/Recrovit.RecroGridFramework.Client.Blazor.svg?label=Recrovit.RecroGridFramework.Client.Blazor)](https://www.nuget.org/packages/Recrovit.RecroGridFramework.Client.Blazor/)
+
+Official Website: [RecroGrid Framework](https://RecroGridFramework.com) 
